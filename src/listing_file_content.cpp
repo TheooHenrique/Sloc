@@ -4,7 +4,7 @@
 #include <string>
 
 int main() {
-  std::ifstream ifs{ "listing_file_conten.cpp" };
+  std::ifstream ifs{ "listing_file_content.cpp" };
   std::string line;
   int x;
 
