@@ -85,15 +85,46 @@ inline std::string trim(const std::string& s, const char* t = " \t\n\r\f\v") {
 //validate arguments in CLI
 void validate_arguments(int argc, char* argv[], RunningOpt& run_options) {
   for (size_t ct{1}; ct < argc; ++ct) {
-    if (strcmp(argv[ct], "--help") == 0 || strcmp(argv[ct], "-h") == 0){ //strcmp returns 0 if strings are equal
+    auto it {inputed_arguments_with_their_keys.find(argv[ct])};
+    if (it != inputed_arguments_with_their_keys.end()){
+      enum_arguments arg {it -> second};
+
+      switch(arg){
+        case RECURSIVE: run_options.recursive = true; break;
+        case SORTDES: run_options.sort_descending = true; break;
+        case SORTAS: run_options.sort_ascending = true; break;
+        case HELP: run_options.help = true; break;
+      }
+    }
+
+    if (strcmp(argv[ct], "--help") == 0 || strcmp(argv[ct], "-h")){
       usage();
       exit(0);
-    } else if (strcmp(argv[ct], "-r") == 0) {
-      run_options.recursive = true; //should look for files recursively in the directory provided. (eu nao sei oq isso faria de vdd, mas vamo indo ne, vamos descobrir uma hora)
-    } else if (strcmp(argv[ct], "-s") == 0 || strcmp(argv[ct], "-S") == 0){ //é obrigatorio o user colocar isso?
-      run_options.sort_ascending = (strcmp(argv[ct], "-s") == 0);
-      run_options.sort_field = argv[++ct][0];
-    } else { //if it's a file or directory, add to the list
+    }
+
+    //Checking if sort arguments are correctly inputed
+    if (strcmp(argv[ct], "-s") || strcmp(argv[ct], "-S") == 0){
+      if (ct + 1 >= argc) { //treating memory leak
+        std::cerr << "Missing value\n";
+        usage();
+        exit(1);
+      }
+      const char* nextArgument{argv[ct+1]};
+      bool valid_input = true;
+      if (strcmp(nextArgument, "f") == 0 && strcmp(nextArgument, "t") == 0 && strcmp(nextArgument, "c") == 0 && strcmp(nextArgument, "d") == 0 && strcmp(nextArgument, "b") == 0 && strcmp(nextArgument, "s") == 0 && strcmp(nextArgument, "a") == 0){
+        valid_input = false;
+        std::cerr << "Insert a parameter after sort argument! See the parameter list below:\n";
+        usage();
+        exit(0);
+      }
+    }
+
+
+    std::string argument(argv[ct]);
+    if(argument.length() >= 4);
+    std::string last4 {argument.end() - 4, argument.end()};
+    std::string last2 {argument.end() - 2, argument.end()};
+    if (last4 == ".cpp" || last4 == ".hpp" || last2 == ".c" || last2 == ".h"){
       run_options.input_list.push_back(argv[ct]);
     }
   }
@@ -103,6 +134,17 @@ void validate_arguments(int argc, char* argv[], RunningOpt& run_options) {
     usage();
   }
 }
+
+//== Collect Files
+
+void collect_files(std::vector<std::string> input_list, bool recursive, std::vector<FileInfo> db){ //check all .c, .cpp, .h, .hpp
+  if (!recursive){
+
+  }
+} 
+
+
+
 
 //== Main entry
 

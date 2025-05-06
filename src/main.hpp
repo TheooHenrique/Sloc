@@ -12,6 +12,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <unordered_map>
 
 //== Enumerations
 
@@ -23,6 +24,25 @@ enum lang_type_e : std::uint8_t {
     HPP,    //!< C++ header
     UNDEF,  //!< Undefined type.
   };
+
+/// This enumeration lists all the supported arguments for sorting
+
+enum sorting_arg : std::uint8_t {
+  f = 0,     //filename
+  t,         //filetype
+  c,         //comments
+  d,         //doc comments
+  b,         //blank lines
+  s,         //sloc
+  a,         //all
+};
+
+enum enum_arguments : std::uint8_t {
+  RECURSIVE = 0,        //recursive
+  SORTDES,              //sort descending
+  SORTAS,               //sort ascending
+  HELP,                 //help
+};
   
   //== Class/Struct declaration
   
@@ -39,6 +59,8 @@ enum lang_type_e : std::uint8_t {
     count_t n_doc_comments; //!< # of doc comments
     count_t n_loc;          //!< # lines of code.
     count_t n_lines;        //!< # of lines.
+
+    
   
     /// constructor
     FileInfo(std::string fn = "",
@@ -58,6 +80,8 @@ enum lang_type_e : std::uint8_t {
     bool recursive = false;
     char sort_field = '\0';
     bool sort_ascending = false;
+    bool sort_descending = false;
+    bool help = false;
     std::vector<std::string> input_list;  //!< This might be a list of filenames or a directories.
   };
 
@@ -70,5 +94,25 @@ enum lang_type_e : std::uint8_t {
   inline std::string trim(const std::string& s, const char* t = " \t\n\r\f\v");
 
   void validate_arguments(int argc, char* argv[], RunningOpt& run_options);
+
+  
+  const std::unordered_map<std::string, enum_arguments> inputed_arguments_with_their_keys = {
+    {"-r", RECURSIVE},
+    {"-s", SORTAS},
+    {"-S", SORTDES},
+    {"-h", HELP}, {"--help", HELP}
+  };
+
+    ///Declaring dictionary that relates the sorting values an the inputs
+    const std::unordered_map<std::string, sorting_arg> sorters_with_their_keys = {
+      {"f", f},
+      {"t", t},
+      {"c", c},
+      {"d", d},
+      {"b", b},
+      {"s", s},
+      {"a", a},
+    };
+
 
 #endif
