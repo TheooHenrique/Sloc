@@ -8,6 +8,7 @@
  */
 
  #include "main.hpp"
+#include <string>
 
 /// help message
 
@@ -48,7 +49,7 @@ void usage(std::string_view msg) {
   std::cout << "            (c)omments, (d)oc comments, (b)lank lines, (s)loc, or (a)ll.\n";
   std::cout << "            Default is to show files in ordem of appearance.\n";
 }
-
+std::string universal{"entrei em nada"};
 //== Aux functions
 
 // trim from left
@@ -93,10 +94,84 @@ count_t countTotalLines (const std::string& filename) {
   return line;
 }
 
+
+
+
+///Verify if the comment command is part of the code
+bool isPartOfCode(std::string str, std::string line){
+for (uint8_t i{0}; i < line.length(); i++ ){
+  size_t indexStart{line.find(str)};
+  size_t indexEnd{indexStart + str.length()};
+
+  if (line[indexStart - 1] == '"' && line[indexEnd + 1] == '"'){
+    return true;
+  }
+}
+return false;
+}
+/*
+*/
+
+
+///Update the current state
+void updateState(std::string line, Turnstile ts, FileInfo info){
+  int blankLine;
+  uint8_t len{static_cast<uint8_t>(line.length())};
+  //universal = "EU ENTREI AQUI";
+  for (size_t i{0}; i < len; ++i){
+    auto minline = line.substr(i, 3);
+
+    if (minline == "/*"){
+      //universal = "EU ENTREI AQUI";
+      //break;
+      if (!isPartOfCode(minline, line)){ts.current_state = ts.COMMENT;}
+      i += 2;
+      continue;
+      info.n_comments++;
+    }
+
+    if (minline == "/*!" || minline == "/**"){
+      if (!isPartOfCode(minline, line)) {ts.current_state = ts.DOXY;}
+      i += 2;
+      info.n_doc_comments++;
+      continue;
+    } 
+
+
+    if (ts.current_state == ts.COMMENT || ts.current_state == ts.DOXY){
+      if (!isPartOfCode(minline, line)){ts.current_state = ts.CODE;}
+      i += 2;
+      info.n_loc++;
+      continue;
+    }
+    
+    if (ts.current_state != ts.COMMENT && ts.current_state != ts.DOXY){
+      bool blank{true};
+      universal = "EU ENTREI AQUI";
+      for (char character : line) {
+        if (!line.empty()) {blank = false; break;}
+      }
+      
+      if (blank) info.n_blank++;
+    }
+
+  }
+}
+
+void statesMachine(const std::string& filename, Turnstile ts, FileInfo info){
+  std::ifstream file(filename);
+  std::string codeLines;
+
+  while (std::getline(file, codeLines)) {
+    updateState(codeLines, ts, info);
+  }
+}
+
+/*
 //count blank lines
 count_t countBlankLines (const std::string& filename) {
   std::ifstream file(filename);
-  int blankLine = 0;
+  int blankLine{0};
   std::string blankCodeLines;
 
   while (std::getline(file, blankCodeLines)) {
@@ -110,14 +185,18 @@ count_t countBlankLines (const std::string& filename) {
   }
 
   return blankLine;
-}
+}*/
+
+//count comment lines
+
 
 //function to apply the functions of totallines and blanklines to an object
 FileInfo process_file(const std::string& filename) {
   FileInfo info(filename);
+  Turnstile ts;
 
+  statesMachine(filename, ts, info);
   info.n_lines = countTotalLines(filename);
-  info.n_blank = countBlankLines(filename);
 
   // deixa assim por enquanto
   info.n_comments = 0;
@@ -126,7 +205,7 @@ FileInfo process_file(const std::string& filename) {
 
   return info;
 }
-
+ 
 //validate arguments in CLI
 void validate_arguments(int argc, char* argv[], RunningOpt& run_options) {
   for (size_t ct{1}; ct < argc; ++ct) {
@@ -188,7 +267,7 @@ void collect_files(std::vector<std::string> input_list, bool recursive, std::vec
   }
 } 
 
-void print_summary(const std::vector<FileInfo>& db) {
+void print_summary(const std::vector<FileInfo>& db/*, Turnstile ts*/) {
   int total_files = 0;
     count_t total_lines = 0;
     count_t total_blank = 0;
@@ -197,6 +276,9 @@ void print_summary(const std::vector<FileInfo>& db) {
         std::cout << "--- Arquivo: " << info.filename << " ---\n";
         std::cout << "  Linhas totais:   " << info.n_lines << "\n";
         std::cout << "  Linhas em branco: " << info.n_blank << "\n";
+        std::cout << "  Linhas de comentário: " << info.n_comments << "\n";
+        //std::cout << "  Estado: " << ts.current_state << "\n";
+        std::cout << "  FUNCIONA PFV: " << universal << "\n";
 
         total_files++;
         total_lines += info.n_lines;
@@ -216,7 +298,6 @@ void print_summary(const std::vector<FileInfo>& db) {
 //== Main entry
 
 int main(int argc, char* argv[]) {
-
   RunningOpt run_options;
   validate_arguments(argc, argv, run_options);
 

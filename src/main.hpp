@@ -73,6 +73,20 @@ enum enum_arguments : std::uint8_t {
       /* empty*/
     }
   };
+
+  ///The class that determine the states of the code
+  class Turnstile {
+    public:
+      //States
+      enum turnstile_state : std::uint8_t {START, CODE, POSSIBCOMMENT, COMMENT, POSSIBDOXY, DOXY};
+      //Actions
+      enum input_t : std::uint8_t {FIRST, BAR, DOUBLEBAR, TRIPLEBAR, BARASTERISK};
+      //Current State
+      std::uint8_t current_state {START};
+      std::uint8_t current_action {FIRST};
+  };
+
+  
   
   /// The running options provided via CLI.
   struct RunningOpt {
