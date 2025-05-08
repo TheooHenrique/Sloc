@@ -52,7 +52,7 @@ void usage(std::string_view msg) {
 //== Aux functions
 
 // trim from left
-inline std::string ltrim(const std::string& s, const char* t = " \t\n\r\f\v") {
+inline std::string ltrim(const std::string& s, const char* t) {
   std::string clone{s}; //copy of the original string s
   size_t start = clone.find_first_not_of(t); //finds the first character not in t, i.e. the first visible character
 
@@ -65,7 +65,7 @@ inline std::string ltrim(const std::string& s, const char* t = " \t\n\r\f\v") {
   return clone;
 }
 // trim from right
-inline std::string rtrim(const std::string& s, const char* t = " \t\n\r\f\v") {
+inline std::string rtrim(const std::string& s, const char* t) {
   std::string clone{s}; //copy of the original string s
   size_t end = clone.find_last_not_of(t); //finds the last character not in t, i.e. the last visible character
 
@@ -78,18 +78,63 @@ inline std::string rtrim(const std::string& s, const char* t = " \t\n\r\f\v") {
   return clone;
 }
 // trim from left & right
-inline std::string trim(const std::string& s, const char* t = " \t\n\r\f\v") {
+inline std::string trim(const std::string& s, const char* t) {
   return ltrim(rtrim(s, t), t);
+}
+
+//count total lines (substituir esse código pra ele pegar as linhas de código, e não apenas todas)
+count_t countTotalLines (const std::string& filename) {
+  std::ifstream file(filename);
+  int line = 0;
+  std::string codeLines;
+
+  while (std::getline(file, codeLines)) ++line;
+  
+  return line;
+}
+
+//count blank lines
+count_t countBlankLines (const std::string& filename) {
+  std::ifstream file(filename);
+  int blankLine = 0;
+  std::string blankCodeLines;
+
+  while (std::getline(file, blankCodeLines)) {
+    bool blank = true;
+
+    for (char line : blankCodeLines) {
+      if (!std::isspace(line)) {blank = false; break;}
+    }
+    
+    if (blank) ++blankLine;
+  }
+
+  return blankLine;
+}
+
+//function to apply the functions of totallines and blanklines to an object
+FileInfo process_file(const std::string& filename) {
+  FileInfo info(filename);
+
+  info.n_lines = countTotalLines(filename);
+  info.n_blank = countBlankLines(filename);
+
+  // deixa assim por enquanto
+  info.n_comments = 0;
+  info.n_doc_comments = 0;
+  info.n_loc = info.n_lines - info.n_blank - info.n_comments;
+
+  return info;
 }
 
 //validate arguments in CLI
 void validate_arguments(int argc, char* argv[], RunningOpt& run_options) {
   for (size_t ct{1}; ct < argc; ++ct) {
-    auto it {inputed_arguments_with_their_keys.find(argv[ct])};
-    if (it != inputed_arguments_with_their_keys.end()){
-      enum_arguments arg {it -> second};
+    auto it {inputed_arguments_with_their_keys.find(argv[ct])}; //find the key argv[ct] in inputed_arguments_with_their_keys, which is, e.g., "-r" in case of recursive
+    if (it != inputed_arguments_with_their_keys.end()){ //.find() returns .end() if nothing is found with that inputed argument
+      enum_arguments arg {it -> second}; //iterator -> second returns the value of the dictionary
 
-      switch(arg){
+      switch(arg){ //if the value of the unordered_map is
         case RECURSIVE: run_options.recursive = true; break;
         case SORTDES: run_options.sort_descending = true; break;
         case SORTAS: run_options.sort_ascending = true; break;
@@ -97,13 +142,13 @@ void validate_arguments(int argc, char* argv[], RunningOpt& run_options) {
       }
     }
 
-    if (strcmp(argv[ct], "--help") == 0 || strcmp(argv[ct], "-h")){
+    if (run_options.help){
       usage();
       exit(0);
     }
 
     //Checking if sort arguments are correctly inputed
-    if (strcmp(argv[ct], "-s") || strcmp(argv[ct], "-S") == 0){
+    if (run_options.sort_ascending || run_options.sort_descending){
       if (ct + 1 >= argc) { //treating memory leak
         std::cerr << "Missing value\n";
         usage();
@@ -119,13 +164,13 @@ void validate_arguments(int argc, char* argv[], RunningOpt& run_options) {
       }
     }
 
-
     std::string argument(argv[ct]);
-    if(argument.length() >= 4);
-    std::string last4 {argument.end() - 4, argument.end()};
-    std::string last2 {argument.end() - 2, argument.end()};
-    if (last4 == ".cpp" || last4 == ".hpp" || last2 == ".c" || last2 == ".h"){
-      run_options.input_list.push_back(argv[ct]);
+    if(argument.length() >= 4) {
+      std::string last4 {argument.end() - 4, argument.end()};
+      std::string last2 {argument.end() - 2, argument.end()};
+      if (last4 == ".cpp" || last4 == ".hpp" || last2 == ".c" || last2 == ".h"){
+        run_options.input_list.push_back(argv[ct]);
+      }
     }
   }
 
@@ -138,11 +183,33 @@ void validate_arguments(int argc, char* argv[], RunningOpt& run_options) {
 //== Collect Files
 
 void collect_files(std::vector<std::string> input_list, bool recursive, std::vector<FileInfo> db){ //check all .c, .cpp, .h, .hpp
-  if (!recursive){
+  if (!recursive) {
 
   }
 } 
 
+void print_summary(const std::vector<FileInfo>& db) {
+  int total_files = 0;
+    count_t total_lines = 0;
+    count_t total_blank = 0;
+
+    for (const auto& info : db) {
+        std::cout << "--- Arquivo: " << info.filename << " ---\n";
+        std::cout << "  Linhas totais:   " << info.n_lines << "\n";
+        std::cout << "  Linhas em branco: " << info.n_blank << "\n";
+
+        total_files++;
+        total_lines += info.n_lines;
+        total_blank += info.n_blank;
+    }
+
+    if (!db.empty()) {
+        std::cout << "\n--- Resumo Geral ---\n";
+        std::cout << "Total de arquivos processados: " << total_files << "\n";
+        std::cout << "Total de linhas:               " << total_lines << "\n";
+        std::cout << "Total de linhas em branco:     " << total_blank << "\n";
+    }
+}
 
 
 
@@ -154,6 +221,11 @@ int main(int argc, char* argv[]) {
   validate_arguments(argc, argv, run_options);
 
   std::vector<FileInfo> db;
+
+  for (const auto& file : run_options.input_list) {
+    db.push_back(process_file(file)); //adding each new file object to db
+  }
+
   /*tem q declarar essas funções. collect_files vai pegar os arquivos .c, .cpp, .h e .hpp.
 
   count_lines vai contar n_blank, n_comments, n_doc_comments, n_loc e n_lines
@@ -173,6 +245,8 @@ int main(int argc, char* argv[]) {
   }
   
   print_report(db);*/
+
+  print_summary(db);
 
   ///test to check if FileInfo is working and if the db vector is getting infos
   FileInfo fc;

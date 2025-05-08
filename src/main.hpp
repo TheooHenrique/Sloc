@@ -6,6 +6,7 @@
 #include <cstring>
 #include <dirent.h>
 #include <filesystem>
+#include <fstream> //ifstream
 #include <iomanip>
 #include <iostream>
 #include <optional>
@@ -58,9 +59,7 @@ enum enum_arguments : std::uint8_t {
     count_t n_comments;     //!< # of comment lines.
     count_t n_doc_comments; //!< # of doc comments
     count_t n_loc;          //!< # lines of code.
-    count_t n_lines;        //!< # of lines.
-
-    
+    count_t n_lines;        //!< # of lines.    
   
     /// constructor
     FileInfo(std::string fn = "",
@@ -95,24 +94,24 @@ enum enum_arguments : std::uint8_t {
 
   void validate_arguments(int argc, char* argv[], RunningOpt& run_options);
 
-  
-  const std::unordered_map<std::string, enum_arguments> inputed_arguments_with_their_keys = {
+  ///Declaring dictionary that relates the arguments with the keys
+  const std::unordered_map<std::string, enum_arguments> inputed_arguments_with_their_keys = { //eu não acho q KEYS seja uma palavra legal, mas não consigo pensar em outra
     {"-r", RECURSIVE},
     {"-s", SORTAS},
     {"-S", SORTDES},
     {"-h", HELP}, {"--help", HELP}
   };
 
-    ///Declaring dictionary that relates the sorting values an the inputs
-    const std::unordered_map<std::string, sorting_arg> sorters_with_their_keys = {
-      {"f", f},
-      {"t", t},
-      {"c", c},
-      {"d", d},
-      {"b", b},
-      {"s", s},
-      {"a", a},
-    };
+  ///Declaring dictionary that relates the sorting values with the inputs
+  const std::unordered_map<std::string, sorting_arg> sorters_with_their_keys = {
+    {"f", f},
+    {"t", t},
+    {"c", c},
+    {"d", d},
+    {"b", b},
+    {"s", s},
+    {"a", a},
+  };
 
 
 #endif
