@@ -83,7 +83,7 @@ inline std::string trim(const std::string& s, const char* t) {
   return ltrim(rtrim(s, t), t);
 }
 
-//count total lines (substituir esse código pra ele pegar as linhas de código, e não apenas todas)
+//count total lines
 count_t countTotalLines (const std::string& filename) {
   std::ifstream file(filename);
   int line = 0;
@@ -94,20 +94,42 @@ count_t countTotalLines (const std::string& filename) {
   return line;
 }
 
+/*
+//count blank lines
+count_t countBlankLines (const std::string& filename) {
+  std::ifstream file(filename);
+  int blankLine{0};
+  std::string blankCodeLines;
+
+  while (std::getline(file, blankCodeLines)) {
+    bool blank = true;
+
+    for (char line : blankCodeLines) {
+      if (!std::isspace(line)) {blank = false; break;}
+    }
+    
+    if (blank) ++blankLine;
+  }
+
+  return blankLine;
+}*/
+
+//count comment lines
+
 
 
 
 ///Verify if the comment command is part of the code
 bool isPartOfCode(std::string str, std::string line){
-for (uint8_t i{0}; i < line.length(); i++ ){
-  size_t indexStart{line.find(str)};
-  size_t indexEnd{indexStart + str.length()};
+  for (uint8_t i{0}; i < line.length(); i++ ){
+    size_t indexStart{line.find(str)};
+    size_t indexEnd{indexStart + str.length()};
 
-  if (line[indexStart - 1] == '"' && line[indexEnd + 1] == '"'){
-    return true;
+    if (line[indexStart - 1] == '"' && line[indexEnd + 1] == '"'){
+      return true;
+    }
   }
-}
-return false;
+  return false;
 }
 /*
 */
@@ -167,29 +189,6 @@ void statesMachine(const std::string& filename, Turnstile ts, FileInfo info){
   }
 }
 
-/*
-//count blank lines
-count_t countBlankLines (const std::string& filename) {
-  std::ifstream file(filename);
-  int blankLine{0};
-  std::string blankCodeLines;
-
-  while (std::getline(file, blankCodeLines)) {
-    bool blank = true;
-
-    for (char line : blankCodeLines) {
-      if (!std::isspace(line)) {blank = false; break;}
-    }
-    
-    if (blank) ++blankLine;
-  }
-
-  return blankLine;
-}*/
-
-//count comment lines
-
-
 //function to apply the functions of totallines and blanklines to an object
 FileInfo process_file(const std::string& filename) {
   FileInfo info(filename);
@@ -242,55 +241,90 @@ void validate_arguments(int argc, char* argv[], RunningOpt& run_options) {
         exit(0);
       }
     }
+  }
 
-    std::string argument(argv[ct]);
+
+  for (size_t ct{1}; ct < argc; ++ct) { //another of this loop so the files/directories can be analysed separated
+    std::string argument(argv[ct]); //this will be the file or directory we analyse
+    
     if(argument.length() >= 4) {
       std::string last4 {argument.end() - 4, argument.end()};
       std::string last2 {argument.end() - 2, argument.end()};
       if (last4 == ".cpp" || last4 == ".hpp" || last2 == ".c" || last2 == ".h"){
-        run_options.input_list.push_back(argv[ct]);
+        if (run_options.added_files.find(argument) == run_options.added_files.end()) { //if this element is not found in added_files, e.g., if main.cpp is not found in added_files, then we need to add it with the insert
+          run_options.input_list.push_back(argument); //add the file .cpp, .c, .h or .hpp in input_list
+          run_options.added_files.insert(argument); //insert this added file to the set of added files
+        }
+        
+
+        continue; //using continue for the loop to skip to the next iteration. Below is the recursion code, which will first check whether the argument is a directory or not. As it has already been seen in this part that it is a file, it makes no sense to check whether it is the directory
+      } 
+    }
+
+    if (run_options.recursive) {
+      if (fs::exists(argument) && fs::is_directory(argument)) {
+        run_options.directory_list.push_back(argument); //adding this directory to this list in run_options
       }
     }
-  }
-
-  if (run_options.input_list.empty()) {
-    std::cerr << "Error: no input file or directory provided.\n";
-    usage();
   }
 }
 
 //== Collect Files
-
+/*
 void collect_files(std::vector<std::string> input_list, bool recursive, std::vector<FileInfo> db){ //check all .c, .cpp, .h, .hpp
   if (!recursive) {
 
   }
-} 
+} */
+
+void collect_files(RunningOpt& run_options) {
+  if (!run_options.recursive || run_options.directory_list.empty()) return; //return gets out of the function
+
+  for (const auto& directory : run_options.directory_list) { //for each directory in directory_list
+    for (const auto& directory_file : fs::recursive_directory_iterator(directory)) {
+      if (directory_file.is_regular_file()) { //if the file in the directory is a file, not another directory
+        std::string file_path = directory_file.path().string(); //path() gets the... path... of the file, and .string() converts the path to string
+
+        if (file_path.length() >= 4) {
+          std::string last4(file_path.end() - 4, file_path.end());
+          std::string last2(file_path.end() - 2, file_path.end());
+
+          if (last4 == ".cpp" || last4 == ".hpp" || last2 == ".c" || last2 == ".h") {
+              if (run_options.added_files.find(file_path) == run_options.added_files.end()) { //if the path of the file is not added
+                run_options.input_list.push_back(file_path); //add the file path to the input_list
+                run_options.added_files.insert(file_path); //now the path is added. this was made to avoid duplicate counting of a file when the user puts the file and also its directory
+              }
+          }
+        }
+      }
+    }
+  }
+}
 
 void print_summary(const std::vector<FileInfo>& db/*, Turnstile ts*/) {
   int total_files = 0;
-    count_t total_lines = 0;
-    count_t total_blank = 0;
+  count_t total_lines = 0;
+  count_t total_blank = 0;
 
-    for (const auto& info : db) {
-        std::cout << "--- Arquivo: " << info.filename << " ---\n";
-        std::cout << "  Linhas totais:   " << info.n_lines << "\n";
-        std::cout << "  Linhas em branco: " << info.n_blank << "\n";
-        std::cout << "  Linhas de comentário: " << info.n_comments << "\n";
-        //std::cout << "  Estado: " << ts.current_state << "\n";
-        std::cout << "  FUNCIONA PFV: " << universal << "\n";
+  for (const auto& info : db) {
+      std::cout << "--- Arquivo: " << info.filename << " ---\n";
+      std::cout << "  Linhas totais:   " << info.n_lines << "\n";
+      std::cout << "  Linhas em branco: " << info.n_blank << "\n";
+      std::cout << "  Linhas de comentário: " << info.n_comments << "\n";
+      //std::cout << "  Estado: " << ts.current_state << "\n";
+      std::cout << "  FUNCIONA PFV: " << universal << "\n";
 
-        total_files++;
-        total_lines += info.n_lines;
-        total_blank += info.n_blank;
-    }
+      total_files++;
+      total_lines += info.n_lines;
+      total_blank += info.n_blank;
+  }
 
-    if (!db.empty()) {
-        std::cout << "\n--- Resumo Geral ---\n";
-        std::cout << "Total de arquivos processados: " << total_files << "\n";
-        std::cout << "Total de linhas:               " << total_lines << "\n";
-        std::cout << "Total de linhas em branco:     " << total_blank << "\n";
-    }
+  if (!db.empty()) {
+      std::cout << "\n--- Resumo Geral ---\n";
+      std::cout << "Total de arquivos processados: " << total_files << "\n";
+      std::cout << "Total de linhas:               " << total_lines << "\n";
+      std::cout << "Total de linhas em branco:     " << total_blank << "\n";
+  }
 }
 
 
@@ -301,25 +335,26 @@ int main(int argc, char* argv[]) {
   RunningOpt run_options;
   validate_arguments(argc, argv, run_options);
 
+  collect_files(run_options);
+
+  if (run_options.input_list.empty() && run_options.directory_list.empty()) {
+    std::cerr << "Error: no input file or directory provided.\n";
+    usage();
+  }
+
   std::vector<FileInfo> db;
 
   for (const auto& file : run_options.input_list) {
     db.push_back(process_file(file)); //adding each new file object to db
   }
 
-  /*tem q declarar essas funções. collect_files vai pegar os arquivos .c, .cpp, .h e .hpp.
+  
 
-  count_lines vai contar n_blank, n_comments, n_doc_comments, n_loc e n_lines
+  /*tem q declarar essas funções.
 
   sort_files vai ordenar os arquivos. honestamente não entendi mt bem como seria a ordenação. vamos falando com nossos colegas e com o prof
 
   print_report calcula largura máxima das colunas (especialmente nome do arquivo), imprime cabeçalho da tabela, imprime cada linha de db. Se tiver mais de 1 arquivo, imprime linha de soma.
-
-  collect_files(run_options.input_list, run_options.recursive, db); //check all .c, .cpp, .h, .hpp
-
-  for (auto& data : db) {
-    count_lines(data);
-  }
 
   if (run_options.sort_field != '\0') {
     sort_files(db, run_options.sort_field, run_options.sort_descending);
