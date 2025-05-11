@@ -90,6 +90,14 @@ class Turnstile { //muda dps o nome dessa classe pq turnstile é catraca em ingl
     std::uint8_t current_action {FIRST};
 };
 
+struct AttributeCount{
+  short lines{0};
+  short blank{0};
+  short loc{0};
+  short com{0};
+  short dox{0};
+};
+
 /// The running options provided via CLI.
 struct RunningOpt {
   bool recursive = false;
@@ -114,11 +122,11 @@ count_t countTotalLines (const std::string& filename);
 
 bool isPartOfCode(std::string str, std::string line);
 
-void updateState(std::string line, Turnstile ts, FileInfo info);
+void updateState(std::string line, Turnstile ts, FileInfo &info);
 
-void statesMachine(const std::string& filename, Turnstile ts, FileInfo info);
+void statesMachine(const std::string& filename, Turnstile ts, FileInfo &info);
 
-FileInfo process_file(const std::string& filename);
+AttributeCount process_file(const std::string& filename);
 
 void validate_arguments(int argc, char* argv[], RunningOpt& run_options);
 

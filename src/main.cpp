@@ -49,7 +49,7 @@ void usage(std::string_view msg) {
   std::cout << "            (c)omments, (d)oc comments, (b)lank lines, (s)loc, or (a)ll.\n";
   std::cout << "            Default is to show files in ordem of appearance.\n";
 }
-std::string universal{"entrei em nada"};
+
 //== Aux functions
 
 // trim from left
@@ -94,115 +94,163 @@ count_t countTotalLines (const std::string& filename) {
   return line;
 }
 
-/*
-//count blank lines
-count_t countBlankLines (const std::string& filename) {
-  std::ifstream file(filename);
-  int blankLine{0};
-  std::string blankCodeLines;
-
-  while (std::getline(file, blankCodeLines)) {
-    bool blank = true;
-
-    for (char line : blankCodeLines) {
-      if (!std::isspace(line)) {blank = false; break;}
-    }
-    
-    if (blank) ++blankLine;
-  }
-
-  return blankLine;
-}*/
-
-//count comment lines
-
-
-
 
 ///Verify if the comment command is part of the code
 bool isPartOfCode(std::string str, std::string line){
-  for (uint8_t i{0}; i < line.length(); i++ ){
-    size_t indexStart{line.find(str)};
-    size_t indexEnd{indexStart + str.length()};
+  
+  bool leftIsPair;
+  bool rightIsPair;
+  int countLeft{0};
+  int countRight{0};
 
-    if (line[indexStart - 1] == '"' && line[indexEnd + 1] == '"'){
-      return true;
+  auto indexFirst{line.find(str)};
+  auto indexLast{indexFirst + str.length() - 1};
+  
+  for (size_t i{0}; i < indexFirst; i++){
+    if (line[i] == '"'){
+      countLeft++;
     }
   }
-  return false;
+
+  if (countLeft%2 == 0){
+    leftIsPair = true;
+  } else{
+    leftIsPair = false;
+  }
+
+  for (; indexLast < line.length(); indexLast++){
+    if (line[indexLast] == '"'){
+      countRight++;
+    }
+  }
+
+  if (countRight%2 == 0){
+    rightIsPair = true;
+  } else{
+    rightIsPair = false;
+  }
+  
+  if (rightIsPair && leftIsPair){
+    return false;
+  } 
+  else if (!rightIsPair && !leftIsPair){
+    return true;
+  }
+  return true;
 }
-/*
-*/
+
 
 
 ///Update the current state
-void updateState(std::string line, Turnstile ts, FileInfo info){
-  int blankLine;
-  uint8_t len{static_cast<uint8_t>(line.length())};
-  //universal = "EU ENTREI AQUI";
-  for (size_t i{0}; i < len; ++i){
-    auto minline = line.substr(i, 3);
+AttributeCount updateState(std::string line, Turnstile &ts){
+  AttributeCount atributes;
+  line = trim(line, " ");
+  size_t len = line.length();
 
-    if (minline == "/*"){
-      //universal = "EU ENTREI AQUI";
-      //break;
-      if (!isPartOfCode(minline, line)){ts.current_state = ts.COMMENT;}
-      i += 2;
-      continue;
-      info.n_comments++;
-    }
+      if (ts.current_state != ts.COMMENT && ts.current_state != ts.DOXY){
 
-    if (minline == "/*!" || minline == "/**"){
-      if (!isPartOfCode(minline, line)) {ts.current_state = ts.DOXY;}
-      i += 2;
-      info.n_doc_comments++;
-      continue;
-    } 
-
-
-    if (ts.current_state == ts.COMMENT || ts.current_state == ts.DOXY){
-      if (!isPartOfCode(minline, line)){ts.current_state = ts.CODE;}
-      i += 2;
-      info.n_loc++;
-      continue;
-    }
-    
-    if (ts.current_state != ts.COMMENT && ts.current_state != ts.DOXY){
-      bool blank{true};
-      universal = "EU ENTREI AQUI";
-      for (char character : line) {
-        if (!line.empty()) {blank = false; break;}
-      }
+        bool blank{false};
       
-      if (blank) info.n_blank++;
+      if (line.empty()) {
+        blank = true;
+        atributes.blank = 1;
+        return atributes;
+      }
+      else if(!line.empty() && line[0] != '/'){
+        atributes.loc = 1;
+      }
+
+    }
+    if (ts.current_state == ts.COMMENT){
+      atributes.com = 1;
+    }
+    if (ts.current_state == ts.DOXY){
+      atributes.dox = 1;
     }
 
-  }
-}
 
-void statesMachine(const std::string& filename, Turnstile ts, FileInfo info){
+
+        for (size_t i{0}; i < len; ++i){
+          auto minline3 = line.substr(i, 3);
+          auto minline2 = line.substr(i, 2);
+
+          if (ts.current_state == ts.DOXY || ts.current_state == ts.COMMENT){
+            if (minline2 == "*/"){
+              ts.current_state = ts.CODE;
+              auto lineafterclosecomment = line.substr(i + 2, line.length());
+              if (!lineafterclosecomment.empty()){
+                AttributeCount recursiveAttributes = updateState(lineafterclosecomment, ts); 
+                atributes.loc += recursiveAttributes.loc;
+                break;
+              }
+            }
+          }
+          
+          if (ts.current_state == ts.CODE || ts.current_state == ts.START){
+            if (minline3 == "/*!" || minline3 == "/**"){
+              if (!isPartOfCode(minline3, line)) {
+                ts.current_state = ts.DOXY;
+                atributes.dox = 1;
+                i += 2;
+                continue;
+              }
+            } 
+  
+            if (minline3 == "//!" || minline3 == "///"){
+              if (!isPartOfCode(minline3, line)){
+                atributes.dox = 1; 
+                break;
+              }
+            }
+  
+            if (minline2 == "/*"){
+              if (!isPartOfCode(minline2, line)){
+                ts.current_state = ts.COMMENT;
+                atributes.com = 1;
+                i += 1;
+                continue;
+              }
+            }
+            if (minline2 == "//"){
+              if (!isPartOfCode(minline2, line)){
+                atributes.com = 1;
+                break;
+              }
+            }
+          }
+
+        }
+      return atributes;
+    }
+
+AttributeCount statesMachine(const std::string& filename, Turnstile ts, AttributeCount &atr){
   std::ifstream file(filename);
   std::string codeLines;
 
   while (std::getline(file, codeLines)) {
-    updateState(codeLines, ts, info);
+    AttributeCount atributes = updateState(codeLines, ts);
+    atr.lines += atributes.lines;
+    atr.blank += atributes.blank;
+    atr.com += atributes.com;
+    atr.dox += atributes.dox;
+    atr.loc += atributes.loc;
   }
+  return atr;
 }
 
 //function to apply the functions of totallines and blanklines to an object
-FileInfo process_file(const std::string& filename) {
-  FileInfo info(filename);
+AttributeCount process_file(const std::string& filename) {
+  AttributeCount atr;
   Turnstile ts;
 
-  statesMachine(filename, ts, info);
-  info.n_lines = countTotalLines(filename);
+  statesMachine(filename, ts, atr);
+  atr.lines = countTotalLines(filename);
 
   // deixa assim por enquanto
-  info.n_comments = 0;
-  info.n_doc_comments = 0;
-  info.n_loc = info.n_lines - info.n_blank - info.n_comments;
+  //info.n_comments = 0;
+  //info.n_doc_comments = 0;
 
-  return info;
+  return atr;
 }
  
 //validate arguments in CLI
@@ -309,10 +357,10 @@ void print_summary(const std::vector<FileInfo>& db/*, Turnstile ts*/) {
   for (const auto& info : db) {
       std::cout << "--- Arquivo: " << info.filename << " ---\n";
       std::cout << "  Linhas totais:   " << info.n_lines << "\n";
+      std::cout << "  Linhas de código: " << info.n_loc << "\n";
       std::cout << "  Linhas em branco: " << info.n_blank << "\n";
       std::cout << "  Linhas de comentário: " << info.n_comments << "\n";
-      //std::cout << "  Estado: " << ts.current_state << "\n";
-      std::cout << "  FUNCIONA PFV: " << universal << "\n";
+      std::cout << "  Linhas de comentário doxygen: " << info.n_doc_comments << "\n";
 
       total_files++;
       total_lines += info.n_lines;
@@ -344,8 +392,19 @@ int main(int argc, char* argv[]) {
 
   std::vector<FileInfo> db;
 
-  for (const auto& file : run_options.input_list) {
-    db.push_back(process_file(file)); //adding each new file object to db
+  for (const auto& file :run_options.input_list){
+    FileInfo current_file;
+    AttributeCount result = process_file(file);
+
+    
+    current_file.filename = file;
+    current_file.n_lines = result.lines;
+    current_file.n_blank = result.blank;
+    current_file.n_comments = result.com;
+    current_file.n_doc_comments = result.dox;
+    current_file.n_loc = result.loc;
+
+    db.push_back(current_file);
   }
 
   
