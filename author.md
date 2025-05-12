@@ -20,7 +20,7 @@ The main reason of doing this project is to verify the quality of code of our ne
 # Problems found or limitations
 
 ## Problems found
-Here we are listing some problems we have found doind the project
+Here we are listing some problems we have found doing the project
 
 ### Work With States
 Work with states was certainly the worst part of the project, not just because statement is something new, but also because a StateMachine is something with a very difficult logic in this case. Thats because of the way this program works, there are very tiny details that if the programmer do not pay attention, he will make mistakes, like:

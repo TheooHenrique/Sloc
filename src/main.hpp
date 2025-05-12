@@ -28,8 +28,12 @@ enum lang_type_e : std::uint8_t {
     H,      //!< C/C++ header
     HPP,    //!< C++ header
     UNDEF,  //!< Undefined type.
-  };
+};
 
+std::string language_to_string (lang_type_e lang_type);
+  
+lang_type_e return_language_by_extension (const std::string& filename);
+  
 /// This enumeration lists all the supported arguments for sorting
 
 enum sorting_arg : std::uint8_t {
@@ -79,10 +83,10 @@ public:
 };
 
 ///The class that determine the states of the code
-class Turnstile { //muda dps o nome dessa classe pq turnstile é catraca em ingles
+class CurrentCount {
   public:
     //States
-    enum turnstile_state : std::uint8_t {START, CODE, POSSIBCOMMENT, COMMENT, POSSIBDOXY, DOXY};
+    enum current_count_state : std::uint8_t {START, CODE, POSSIBCOMMENT, COMMENT, POSSIBDOXY, DOXY};
     //Actions
     enum input_t : std::uint8_t {FIRST, BAR, DOUBLEBAR, TRIPLEBAR, BARASTERISK};
     //Current State
@@ -112,6 +116,10 @@ struct RunningOpt {
 
 void usage(std::string_view msg = "");
 
+std::string percent(count_t part, count_t total);
+
+std::string value_with_percent(count_t value, count_t total);
+
 inline std::string ltrim(const std::string& s, const char* t = " \t\n\r\f\v");
 
 inline std::string rtrim(const std::string& s, const char* t = " \t\n\r\f\v");
@@ -122,9 +130,9 @@ count_t countTotalLines (const std::string& filename);
 
 bool isPartOfCode(std::string str, std::string line);
 
-void updateState(std::string line, Turnstile ts, FileInfo &info);
+void updateState(std::string line, CurrentCount ts, FileInfo &info);
 
-void statesMachine(const std::string& filename, Turnstile ts, FileInfo &info);
+void statesMachine(const std::string& filename, CurrentCount ts, FileInfo &info);
 
 AttributeCount process_file(const std::string& filename);
 

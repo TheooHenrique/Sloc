@@ -52,6 +52,18 @@ void usage(std::string_view msg) {
 
 //== Aux functions
 
+std::string percent(count_t part, count_t total) {
+  if (total == 0) return "0%";
+  double perc = (static_cast<double>(part) / total) * 100; //converts part to double, divides by total and multiplies by 100
+  std::ostringstream oss;
+  oss << std::fixed << std::setprecision(1) << perc; //std::fixed rounds the number and std::setprecision(1) shows one decimal place
+  return oss.str() + "%"; //extracts the contents of ostringstream as a std::string.
+}
+
+std::string value_with_percent(count_t value, count_t total) {
+    return std::to_string(value) + " (" + percent(value, total) + ")";
+}
+
 // trim from left
 inline std::string ltrim(const std::string& s, const char* t) {
   std::string clone{s}; //copy of the original string s
@@ -93,7 +105,6 @@ count_t countTotalLines (const std::string& filename) {
   
   return line;
 }
-
 
 ///Verify if the comment command is part of the code
 bool isPartOfCode(std::string str, std::string line){
@@ -142,7 +153,7 @@ bool isPartOfCode(std::string str, std::string line){
 
 
 ///Update the current state
-AttributeCount updateState(std::string line, Turnstile &ts){
+AttributeCount updateState(std::string line, CurrentCount &ts){
   AttributeCount atributes;
   line = trim(line, " ");
   size_t len = line.length();
@@ -223,7 +234,7 @@ AttributeCount updateState(std::string line, Turnstile &ts){
       return atributes;
     }
 
-AttributeCount statesMachine(const std::string& filename, Turnstile ts, AttributeCount &atr){
+AttributeCount statesMachine(const std::string& filename, CurrentCount ts, AttributeCount &atr){
   std::ifstream file(filename);
   std::string codeLines;
 
@@ -241,14 +252,10 @@ AttributeCount statesMachine(const std::string& filename, Turnstile ts, Attribut
 //function to apply the functions of totallines and blanklines to an object
 AttributeCount process_file(const std::string& filename) {
   AttributeCount atr;
-  Turnstile ts;
+  CurrentCount ts;
 
   statesMachine(filename, ts, atr);
   atr.lines = countTotalLines(filename);
-
-  // deixa assim por enquanto
-  //info.n_comments = 0;
-  //info.n_doc_comments = 0;
 
   return atr;
 }
@@ -266,52 +273,69 @@ void validate_arguments(int argc, char* argv[], RunningOpt& run_options) {
         case SORTAS: run_options.sort_ascending = true; break;
         case HELP: run_options.help = true; break;
       }
-    }
 
-    if (run_options.help){
-      usage();
-      exit(0);
-    }
-
-    //Checking if sort arguments are correctly inputed
-    if (run_options.sort_ascending || run_options.sort_descending){
-      if (ct + 1 >= argc) { //treating memory leak
-        std::cerr << "Missing value\n";
-        usage();
-        exit(1);
-      }
-      const char* nextArgument{argv[ct+1]};
-      bool valid_input = true;
-      if (strcmp(nextArgument, "f") == 0 && strcmp(nextArgument, "t") == 0 && strcmp(nextArgument, "c") == 0 && strcmp(nextArgument, "d") == 0 && strcmp(nextArgument, "b") == 0 && strcmp(nextArgument, "s") == 0 && strcmp(nextArgument, "a") == 0){
-        valid_input = false;
-        std::cerr << "Insert a parameter after sort argument! See the parameter list below:\n";
+      if (run_options.help){
         usage();
         exit(0);
       }
-    }
-  }
 
-
-  for (size_t ct{1}; ct < argc; ++ct) { //another of this loop so the files/directories can be analysed separated
-    std::string argument(argv[ct]); //this will be the file or directory we analyse
-    
-    if(argument.length() >= 4) {
-      std::string last4 {argument.end() - 4, argument.end()};
-      std::string last2 {argument.end() - 2, argument.end()};
-      if (last4 == ".cpp" || last4 == ".hpp" || last2 == ".c" || last2 == ".h"){
-        if (run_options.added_files.find(argument) == run_options.added_files.end()) { //if this element is not found in added_files, e.g., if main.cpp is not found in added_files, then we need to add it with the insert
-          run_options.input_list.push_back(argument); //add the file .cpp, .c, .h or .hpp in input_list
-          run_options.added_files.insert(argument); //insert this added file to the set of added files
+      //Checking if sort arguments are correctly inputed
+      if (run_options.sort_ascending || run_options.sort_descending){
+        if (ct + 1 >= argc) { //treating memory leak
+          std::cerr << "Missing value\n";
+          usage();
+          exit(1);
         }
-        
+        const char* nextArgument{argv[ct+1]};
+        bool valid_input = true;
+        if (strcmp(nextArgument, "f") == 0 && strcmp(nextArgument, "t") == 0 && strcmp(nextArgument, "c") == 0 && strcmp(nextArgument, "d") == 0 && strcmp(nextArgument, "b") == 0 && strcmp(nextArgument, "s") == 0 && strcmp(nextArgument, "a") == 0){
+          valid_input = false;
+          std::cerr << "Insert a parameter after sort argument! See the parameter list below:\n";
+          usage();
+          exit(0);
+        }
+      }
+    } else {
+      std::string file_or_dir_inputed_by_the_user = argv[ct];
 
-        continue; //using continue for the loop to skip to the next iteration. Below is the recursion code, which will first check whether the argument is a directory or not. As it has already been seen in this part that it is a file, it makes no sense to check whether it is the directory
-      } 
+      if (!fs::exists(file_or_dir_inputed_by_the_user)) {
+        std::cerr << "Sorry, unable to read \"" << file_or_dir_inputed_by_the_user << "\".\n";
+      }
+
+      if (fs::is_regular_file(file_or_dir_inputed_by_the_user)) {
+        std::string extension = fs::path(file_or_dir_inputed_by_the_user).extension().string();
+        if (extension == ".cpp" || extension == ".c" || extension == ".hpp" || extension == ".h") {
+          run_options.input_list.push_back(file_or_dir_inputed_by_the_user);
+        } else {
+          std::cerr << "Sorry, \"" << extension << "\" files are not supported at this time.\n";
+          exit(1);
+        }
+      } else if (fs::is_directory(file_or_dir_inputed_by_the_user)) {
+        run_options.directory_list.push_back(file_or_dir_inputed_by_the_user);
+      }
     }
 
-    if (run_options.recursive) {
-      if (fs::exists(argument) && fs::is_directory(argument)) {
-        run_options.directory_list.push_back(argument); //adding this directory to this list in run_options
+    if (run_options.input_list.empty()) {
+      bool found_any_supported_file {false};
+
+      for (const auto& directory : run_options.directory_list) {
+        for (const auto& directory_file : fs::recursive_directory_iterator(directory)) {
+          if (directory_file.is_regular_file()) {
+            std::string extension = directory_file.path().extension().string();
+            if (extension == ".c" || extension == ".cpp" || extension == ".h" || extension == ".hpp") {
+              found_any_supported_file = true;
+              break;
+            }
+          }
+        }
+
+        if (found_any_supported_file) break;
+      }
+
+      if (!found_any_supported_file) {
+        if (!run_options.directory_list.empty()) {
+          std::cerr << "Sorry, unable to find any supported source file inside directory \"" << run_options.directory_list[0] << "\".\n";
+        }
       }
     }
   }
@@ -326,53 +350,127 @@ void collect_files(std::vector<std::string> input_list, bool recursive, std::vec
 } */
 
 void collect_files(RunningOpt& run_options) {
-  if (!run_options.recursive || run_options.directory_list.empty()) return; //return gets out of the function
+  if (run_options.directory_list.empty()) return; //return gets out of the function
 
-  for (const auto& directory : run_options.directory_list) { //for each directory in directory_list
-    for (const auto& directory_file : fs::recursive_directory_iterator(directory)) {
+  std::unordered_set<std::string> unique_files;
+  for (const auto& file : run_options.input_list) {
+    unique_files.insert(fs::absolute(file).string()); //absolute returns the absolute path of the file
+  }
+
+  if (run_options.recursive) {
+    for (const auto& directory : run_options.directory_list) { //for each directory in directory_list
+    for (const auto& directory_file : fs::recursive_directory_iterator(directory)) { //recursive_directory_iterator and directory_iterator both return directory_entry
       if (directory_file.is_regular_file()) { //if the file in the directory is a file, not another directory
         std::string file_path = directory_file.path().string(); //path() gets the... path... of the file, and .string() converts the path to string
+        std::string absolute_path = fs::absolute(file_path).string();
+
+        if (unique_files.find(absolute_path) != unique_files.end()) { //.find returns end(). so if the return is != from .end(), it is found
+          continue;
+        }
 
         if (file_path.length() >= 4) {
           std::string last4(file_path.end() - 4, file_path.end());
           std::string last2(file_path.end() - 2, file_path.end());
 
           if (last4 == ".cpp" || last4 == ".hpp" || last2 == ".c" || last2 == ".h") {
-              if (run_options.added_files.find(file_path) == run_options.added_files.end()) { //if the path of the file is not added
-                run_options.input_list.push_back(file_path); //add the file path to the input_list
-                run_options.added_files.insert(file_path); //now the path is added. this was made to avoid duplicate counting of a file when the user puts the file and also its directory
-              }
+            run_options.input_list.push_back(file_path);
+            unique_files.insert(absolute_path);
           }
         }
       }
     }
   }
+  } else {
+      for (const auto& directory : run_options.directory_list) { //for each directory in directory_list
+        for (const auto& directory_file : fs::directory_iterator(directory)) {
+          if (directory_file.is_regular_file()) { //if the file in the directory is a file, not another directory
+            std::string file_path = directory_file.path().string(); //path() gets the... path... of the file, and .string() converts the path to string
+            std::string absolute_path = fs::absolute(file_path).string();
+
+            if (unique_files.find(absolute_path) != unique_files.end()) {
+              continue;
+            }
+
+            if (file_path.length() >= 4) {
+              std::string last4(file_path.end() - 4, file_path.end());
+              std::string last2(file_path.end() - 2, file_path.end());
+
+              if (last4 == ".cpp" || last4 == ".hpp" || last2 == ".c" || last2 == ".h") {
+                run_options.input_list.push_back(file_path);
+                unique_files.insert(absolute_path);
+              }
+            }
+          }
+        }
+    }
+  }
 }
 
-void print_summary(const std::vector<FileInfo>& db/*, Turnstile ts*/) {
-  int total_files = 0;
-  count_t total_lines = 0;
-  count_t total_blank = 0;
+std::string language_to_string (lang_type_e lang_type) {
+  switch (lang_type) {
+    case C: return "C";
+    case CPP: return "C++";
+    case H: return "C/C++ header";
+    case HPP: return "C++ header";
+    default: return "Undefined type";
+  }
+}
+
+//referring to lang_type_e enum
+lang_type_e return_language_by_extension (const std::string& filename) {
+  fs::path file(filename);
+
+  std::string extension = file.extension().string();
+
+  if (extension == ".cpp") return CPP;
+  if (extension == ".c") return C;
+  if (extension == ".hpp") return HPP;
+  if (extension == ".h") return H;
+
+  return UNDEF;
+}
+
+void print_summary(const std::vector<FileInfo>& db) {
+  if (db.empty()) {
+    std::cout << "No files processed\n";
+    return;
+  }
+
+  size_t max_filename_length {0};
 
   for (const auto& info : db) {
-      std::cout << "--- Arquivo: " << info.filename << " ---\n";
-      std::cout << "  Linhas totais:   " << info.n_lines << "\n";
-      std::cout << "  Linhas de código: " << info.n_loc << "\n";
-      std::cout << "  Linhas em branco: " << info.n_blank << "\n";
-      std::cout << "  Linhas de comentário: " << info.n_comments << "\n";
-      std::cout << "  Linhas de comentário doxygen: " << info.n_doc_comments << "\n";
-
-      total_files++;
-      total_lines += info.n_lines;
-      total_blank += info.n_blank;
+    max_filename_length = std::max(max_filename_length, info.filename.size()); //returns the greater of values
   }
 
-  if (!db.empty()) {
-      std::cout << "\n--- Resumo Geral ---\n";
-      std::cout << "Total de arquivos processados: " << total_files << "\n";
-      std::cout << "Total de linhas:               " << total_lines << "\n";
-      std::cout << "Total de linhas em branco:     " << total_blank << "\n";
+  constexpr size_t MIN_FILENAME_WIDTH {20};
+  size_t filename_width = std::max(max_filename_length, MIN_FILENAME_WIDTH);
+
+  std::cout << "Files processed: " << db.size() << "\n";
+
+  std::string separator(filename_width + 14 + 16 + 16 + 14 + 14 + 10 + 6, '-');
+
+  std::cout << separator << "\n";
+  std::cout << std::left << std::setw(filename_width) << "Filename" << std::setw(14) << "Language" << std::setw(16) << "Comments" << std::setw(16) << "Doc Comments" << std::setw(14) << "Blank" << std::setw(14) << "Code" << "# of lines\n";
+  std::cout << separator << "\n";
+
+  count_t total_comments = 0, total_doc_comments = 0, total_blank = 0, total_code = 0, total_lines = 0;
+
+  for (const auto& info : db) {
+    std::cout << std::left << std::setw(filename_width) << info.filename << std::setw(14) << language_to_string(info.type) << std::setw(16) << value_with_percent(info.n_comments, info.n_lines) << std::setw(16) << value_with_percent(info.n_doc_comments, info.n_lines) << std::setw(14) << value_with_percent(info.n_blank, info.n_lines) << std::setw(14) << value_with_percent(info.n_loc, info.n_lines) << info.n_lines << "\n";
+
+    total_comments += info.n_comments;
+    total_doc_comments += info.n_doc_comments;
+    total_blank += info.n_blank;
+    total_code += info.n_loc;
+    total_lines += info.n_lines;
   }
+
+  if (db.size() > 1) {
+    std::cout << separator << "\n";
+    std::cout << std::left << std::setw(filename_width) << "SUM" << std::setw(14) << "" << std::setw(16) << total_comments << std::setw(16) << total_doc_comments << std::setw(14) << total_blank << std::setw(14) << total_code << total_lines << "\n";
+  }
+
+  std::cout << separator << "\n";
 }
 
 
@@ -392,12 +490,12 @@ int main(int argc, char* argv[]) {
 
   std::vector<FileInfo> db;
 
-  for (const auto& file :run_options.input_list){
+  for (const auto& file : run_options.input_list){
     FileInfo current_file;
     AttributeCount result = process_file(file);
 
-    
     current_file.filename = file;
+    current_file.type = return_language_by_extension(file);
     current_file.n_lines = result.lines;
     current_file.n_blank = result.blank;
     current_file.n_comments = result.com;
@@ -407,34 +505,7 @@ int main(int argc, char* argv[]) {
     db.push_back(current_file);
   }
 
-  
-
-  /*tem q declarar essas funções.
-
-  sort_files vai ordenar os arquivos. honestamente não entendi mt bem como seria a ordenação. vamos falando com nossos colegas e com o prof
-
-  print_report calcula largura máxima das colunas (especialmente nome do arquivo), imprime cabeçalho da tabela, imprime cada linha de db. Se tiver mais de 1 arquivo, imprime linha de soma.
-
-  if (run_options.sort_field != '\0') {
-    sort_files(db, run_options.sort_field, run_options.sort_descending);
-  }
-  
-  print_report(db);*/
-
   print_summary(db);
-
-  ///test to check if FileInfo is working and if the db vector is getting infos
-  FileInfo fc;
-  fc.filename = "test.cpp";
-  fc.type = CPP;
-  fc.n_comments = 4;
-  fc.n_blank = 5;
-  fc.n_loc = 15;
-  fc.n_lines = 20;
-
-  db.push_back(fc);
-
-  db.emplace_back("test.cpp", CPP, 3, 10, 15, 18);
 
   return EXIT_SUCCESS;
 }
