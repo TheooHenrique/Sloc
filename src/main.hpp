@@ -86,12 +86,9 @@ public:
 class CurrentCount {
   public:
     //States
-    enum current_count_state : std::uint8_t {START, CODE, POSSIBCOMMENT, COMMENT, POSSIBDOXY, DOXY};
-    //Actions
-    enum input_t : std::uint8_t {FIRST, BAR, DOUBLEBAR, TRIPLEBAR, BARASTERISK};
+    enum current_count_state : std::uint8_t {START, CODE, POSSIBCOMMENT, COMMENT, POSSIBDOXY, DOXY, LITERAL};
     //Current State
     std::uint8_t current_state {START};
-    std::uint8_t current_action {FIRST};
 };
 
 struct AttributeCount{

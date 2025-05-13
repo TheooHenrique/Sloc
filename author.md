@@ -40,10 +40,7 @@ Note that the `*/` determine the end of the doc-comment block, so this line will
 That was not so hard comparing to statement, but it was a bit difficult to understand where my input was going. Hopefully, this knowledge will bring us some smoothness in next projects.
 
 ## Limitations
-Here we are listing some things that our project can't do.
-
-### Work With Compiling Error Codes
-In this project, the analysis of codes with compiling error are no 100% accuratly, but it works.
+Não sei se vamos deixar
 
 # Grading
 

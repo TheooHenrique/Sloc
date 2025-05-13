@@ -12,6 +12,8 @@
 
 /// help message
 
+std::string universal = "entrei em nada";
+
 void usage(std::string_view msg) {
   std::cout << "Welcome to sloc cpp, version 1.0, (c) DIMAp/UFRN.\n\n";
   std::cout << "NAME\n";
@@ -106,6 +108,13 @@ count_t countTotalLines (const std::string& filename) {
   return line;
 }
 
+bool startLiteral(std::string line, char i){
+  if (line[i - 1] == '\\' || (line[i - 1] == '\'' && line[i + 1] == '\'')){
+    return false;
+  }
+  return true;
+}
+
 ///Verify if the comment command is part of the code
 bool isPartOfCode(std::string str, std::string line){
   
@@ -167,9 +176,9 @@ AttributeCount updateState(std::string line, CurrentCount &ts){
         atributes.blank = 1;
         return atributes;
       }
-      else if(!line.empty() && line[0] != '/'){
+      /*else if(!line.empty() && line[0] != '/'){
         atributes.loc = 1;
-      }
+      }*/
 
     }
     if (ts.current_state == ts.COMMENT){
@@ -178,61 +187,87 @@ AttributeCount updateState(std::string line, CurrentCount &ts){
     if (ts.current_state == ts.DOXY){
       atributes.dox = 1;
     }
+    if (ts.current_state == ts.LITERAL || ts.current_state == ts.CODE){
+      atributes.loc = 1;
+    }
 
 
+    for (size_t i{0}; i < len; ++i){
+      auto minline3 = line.substr(i, 3);
+      auto minline2 = line.substr(i, 2);
 
-        for (size_t i{0}; i < len; ++i){
-          auto minline3 = line.substr(i, 3);
-          auto minline2 = line.substr(i, 2);
+      if (ts.current_state == ts.LITERAL){
+        if (line[i] == '"'){
+          if(startLiteral(line, i)){
+            ts.current_state = ts.START;
+            continue;
+          }
+        }
+      }
 
-          if (ts.current_state == ts.DOXY || ts.current_state == ts.COMMENT){
-            if (minline2 == "*/"){
-              ts.current_state = ts.CODE;
-              auto lineafterclosecomment = line.substr(i + 2, line.length());
-              if (!lineafterclosecomment.empty()){
-                AttributeCount recursiveAttributes = updateState(lineafterclosecomment, ts); 
-                atributes.loc += recursiveAttributes.loc;
-                break;
-              }
-            }
+      if (ts.current_state == ts.DOXY || ts.current_state == ts.COMMENT){
+
+        if (minline2 == "*/"){
+          ts.current_state = ts.START;
+          i += 1;
+          continue;
+        }
+      }
+      
+      if (ts.current_state == ts.CODE || ts.current_state == ts.START){
+        universal = "entreiiirr";
+
+        if (line[i]  == '"'){
+          if (startLiteral(line, line[i])){
+            ts.current_state = ts.LITERAL;
+            continue;
           }
           
-          if (ts.current_state == ts.CODE || ts.current_state == ts.START){
-            if (minline3 == "/*!" || minline3 == "/**"){
-              if (!isPartOfCode(minline3, line)) {
-                ts.current_state = ts.DOXY;
-                atributes.dox = 1;
-                i += 2;
-                continue;
-              }
-            } 
-  
-            if (minline3 == "//!" || minline3 == "///"){
-              if (!isPartOfCode(minline3, line)){
-                atributes.dox = 1; 
-                break;
-              }
-            }
-  
-            if (minline2 == "/*"){
-              if (!isPartOfCode(minline2, line)){
-                ts.current_state = ts.COMMENT;
-                atributes.com = 1;
-                i += 1;
-                continue;
-              }
-            }
-            if (minline2 == "//"){
-              if (!isPartOfCode(minline2, line)){
-                atributes.com = 1;
-                break;
-              }
-            }
-          }
+        }
+
+
+        else if (minline3 == "/*!" || minline3 == "/**"){
+          ts.current_state = ts.DOXY;
+          atributes.dox = 1;
+          i += 2;
+          continue;
+        
+        } 
+
+        else if (minline3 == "//!" || minline3 == "///"){
+
+          atributes.dox = 1; 
+          ts.current_state = ts.START;
+          break;
 
         }
-      return atributes;
+
+        else if (minline2 == "/*"){
+
+          ts.current_state = ts.COMMENT;
+          atributes.com = 1;
+          i += 1;
+          continue;
+          
+        }
+        else if (minline2 == "//"){
+
+          atributes.com = 1;
+          ts.current_state = ts.START;
+          break;
+          
+        }
+        else{
+          ts.current_state = ts.CODE;
+          atributes.loc = 1;
+        }
+      }
     }
+    if (ts.current_state == ts.CODE){
+      ts.current_state = ts.START;
+    }
+    return atributes;
+}
 
 AttributeCount statesMachine(const std::string& filename, CurrentCount ts, AttributeCount &atr){
   std::ifstream file(filename);
@@ -340,14 +375,6 @@ void validate_arguments(int argc, char* argv[], RunningOpt& run_options) {
     }
   }
 }
-
-//== Collect Files
-/*
-void collect_files(std::vector<std::string> input_list, bool recursive, std::vector<FileInfo> db){ //check all .c, .cpp, .h, .hpp
-  if (!recursive) {
-
-  }
-} */
 
 void collect_files(RunningOpt& run_options) {
   if (run_options.directory_list.empty()) return; //return gets out of the function
@@ -471,6 +498,7 @@ void print_summary(const std::vector<FileInfo>& db) {
   }
 
   std::cout << separator << "\n";
+  std::cout << "teste de theo: " << universal << "\n";
 }
 
 
