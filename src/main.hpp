@@ -1,6 +1,7 @@
 #ifndef SLOC_HPP
 #define SLOC_HPP
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -18,6 +19,7 @@
 
 //alias
 namespace fs = std::filesystem;
+using count_t = unsigned long; // Integer type for counting lines.
 
 //== Enumerations
 
@@ -30,12 +32,7 @@ enum lang_type_e : std::uint8_t {
     UNDEF,  //!< Undefined type.
 };
 
-std::string language_to_string (lang_type_e lang_type);
-  
-lang_type_e return_language_by_extension (const std::string& filename);
-  
 /// This enumeration lists all the supported arguments for sorting
-
 enum sorting_arg : std::uint8_t {
   f = 0,     //filename
   t,         //filetype
@@ -46,6 +43,7 @@ enum sorting_arg : std::uint8_t {
   a,         //all
 };
 
+/// This enumeration lists all the supported
 enum enum_arguments : std::uint8_t {
   RECURSIVE = 0,        //recursive
   SORTDES,              //sort descending
@@ -53,10 +51,8 @@ enum enum_arguments : std::uint8_t {
   HELP,                 //help
 };
   
-//== Class/Struct declaration
 
-/// Integer type for counting lines.
-using count_t = unsigned long;
+//== Classes
 
 /// Stores the file information we are collecting.
 class FileInfo {
@@ -91,6 +87,9 @@ class CurrentCount {
     std::uint8_t current_state {START};
 };
 
+
+//== Structs
+
 struct AttributeCount{
   short lines{0};
   short blank{0};
@@ -101,42 +100,21 @@ struct AttributeCount{
 
 /// The running options provided via CLI.
 struct RunningOpt {
-  bool recursive = false;
-  char sort_field = '\0';
-  bool sort_ascending = false;
-  bool sort_descending = false;
-  bool help = false;
+  bool recursive { false };
+  std::optional<sorting_arg> sort_field;
+  bool should_sort {false};
+  bool sort_ascending {false};
+  bool sort_descending {false};
+  bool help { false };
   std::vector<std::string> input_list;  //!< list of filenames
   std::vector<std::string> directory_list; //!< list of directories
   std::unordered_set<std::string> added_files;
 };
 
-void usage(std::string_view msg = "");
-
-std::string percent(count_t part, count_t total);
-
-std::string value_with_percent(count_t value, count_t total);
-
-inline std::string ltrim(const std::string& s, const char* t = " \t\n\r\f\v");
-
-inline std::string rtrim(const std::string& s, const char* t = " \t\n\r\f\v");
-
-inline std::string trim(const std::string& s, const char* t = " \t\n\r\f\v");
-
-count_t countTotalLines (const std::string& filename);
-
-bool isPartOfCode(std::string str, std::string line);
-
-void updateState(std::string line, CurrentCount ts, FileInfo &info);
-
-void statesMachine(const std::string& filename, CurrentCount ts, FileInfo &info);
-
-AttributeCount process_file(const std::string& filename);
-
-void validate_arguments(int argc, char* argv[], RunningOpt& run_options);
+//== Unordered Maps
 
 ///Declaring dictionary that relates the arguments with the keys
-const std::unordered_map<std::string, enum_arguments> inputed_arguments_with_their_keys = { //eu não acho q KEYS seja uma palavra legal, mas não consigo pensar em outra
+const std::unordered_map<std::string, enum_arguments> inputed_arguments_with_their_keys = {
   {"-r", RECURSIVE},
   {"-s", SORTAS},
   {"-S", SORTDES},
@@ -154,5 +132,36 @@ const std::unordered_map<std::string, sorting_arg> sorters_with_their_keys = {
   {"a", a},
 };
 
+//== Functions
+
+std::string percent(count_t part, count_t total);
+
+std::string value_with_percent(count_t value, count_t total);
+
+std::string language_to_string (lang_type_e lang_type);
+
+inline std::string ltrim(const std::string& s, const char* t = " \t\n\r\f\v");
+
+inline std::string rtrim(const std::string& s, const char* t = " \t\n\r\f\v");
+
+inline std::string trim(const std::string& s, const char* t = " \t\n\r\f\v");
+  
+lang_type_e return_language_by_extension (const std::string& filename);
+
+void statesMachine(const std::string& filename, CurrentCount ts, FileInfo &info);
+
+void updateState(std::string line, CurrentCount ts, FileInfo &info);
+
+void usage(std::string_view msg = "");
+
+void validate_arguments(int argc, char* argv[], RunningOpt& run_options);
+
+count_t countTotalLines (const std::string& filename);
+
+bool compare_files(const FileInfo& firstFile, const FileInfo& secondFile, std::optional<sorting_arg> sort_field, bool sort_ascending);
+
+bool isPartOfCode(std::string str, std::string line);
+
+AttributeCount process_file(const std::string& filename);
 
 #endif

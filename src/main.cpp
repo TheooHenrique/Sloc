@@ -215,7 +215,6 @@ AttributeCount updateState(std::string line, CurrentCount &ts){
       }
       
       if (ts.current_state == ts.CODE || ts.current_state == ts.START){
-        universal = "entreiiirr";
 
         if (line[i]  == '"'){
           if (startLiteral(line, line[i])){
@@ -269,7 +268,7 @@ AttributeCount updateState(std::string line, CurrentCount &ts){
     return atributes;
 }
 
-AttributeCount statesMachine(const std::string& filename, CurrentCount ts, AttributeCount &atr){
+AttributeCount statesMachine(const std::string& filename, CurrentCount ts, AttributeCount& atr){
   std::ifstream file(filename);
   std::string codeLines;
 
@@ -298,14 +297,14 @@ AttributeCount process_file(const std::string& filename) {
 //validate arguments in CLI
 void validate_arguments(int argc, char* argv[], RunningOpt& run_options) {
   for (size_t ct{1}; ct < argc; ++ct) {
-    auto it {inputed_arguments_with_their_keys.find(argv[ct])}; //find the key argv[ct] in inputed_arguments_with_their_keys, which is, e.g., "-r" in case of recursive
-    if (it != inputed_arguments_with_their_keys.end()){ //.find() returns .end() if nothing is found with that inputed argument
+    auto it { inputed_arguments_with_their_keys.find(argv[ct]) }; //find the key argv[ct] in inputed_arguments_with_their_keys, which is, e.g., "-r" in case of recursive
+    if (it != inputed_arguments_with_their_keys.end()) { //.find() returns .end() if nothing is found with that inputed argument
       enum_arguments arg {it -> second}; //iterator -> second returns the value of the dictionary
 
       switch(arg){ //if the value of the unordered_map is
         case RECURSIVE: run_options.recursive = true; break;
-        case SORTDES: run_options.sort_descending = true; break;
-        case SORTAS: run_options.sort_ascending = true; break;
+        case SORTDES: run_options.sort_descending = true; run_options.should_sort = true; break;
+        case SORTAS: run_options.sort_ascending = true; run_options.should_sort = true; break;
         case HELP: run_options.help = true; break;
       }
 
@@ -315,19 +314,21 @@ void validate_arguments(int argc, char* argv[], RunningOpt& run_options) {
       }
 
       //Checking if sort arguments are correctly inputed
-      if (run_options.sort_ascending || run_options.sort_descending){
+      if (arg == SORTAS || arg == SORTDES){
         if (ct + 1 >= argc) { //treating memory leak
           std::cerr << "Missing value\n";
           usage();
           exit(1);
         }
-        const char* nextArgument{argv[ct+1]};
-        bool valid_input = true;
-        if (strcmp(nextArgument, "f") == 0 && strcmp(nextArgument, "t") == 0 && strcmp(nextArgument, "c") == 0 && strcmp(nextArgument, "d") == 0 && strcmp(nextArgument, "b") == 0 && strcmp(nextArgument, "s") == 0 && strcmp(nextArgument, "a") == 0){
-          valid_input = false;
-          std::cerr << "Insert a parameter after sort argument! See the parameter list below:\n";
+        const char* nextArgument { argv[ct+1] };
+        auto it { sorters_with_their_keys.find(nextArgument) }; //find the key argv[ct+1] in sorters_with_their_keys, which is, e.g., "f" in case of sort by filename
+        if (it != sorters_with_their_keys.end()) {
+          run_options.sort_field = it -> second;
+          ct++;
+        } else {
+          std::cerr << "Invalid sorter parameter: " << nextArgument << "\n";
           usage();
-          exit(0);
+          exit(1);
         }
       }
     } else {
@@ -414,7 +415,7 @@ void collect_files(RunningOpt& run_options) {
             std::string file_path = directory_file.path().string(); //path() gets the... path... of the file, and .string() converts the path to string
             std::string absolute_path = fs::absolute(file_path).string();
 
-            if (unique_files.find(absolute_path) != unique_files.end()) {
+            if (unique_files.find(absolute_path) != unique_files.end()) { //if the path of a file is found, is because the file is already here, so we go to the next iteraction. this way, there is no chance for the file to be count twice
               continue;
             }
 
@@ -430,6 +431,28 @@ void collect_files(RunningOpt& run_options) {
           }
         }
     }
+  }
+}
+
+bool compare_files(const FileInfo& firstFile, const FileInfo& secondFile, std::optional<sorting_arg> sort_field, bool sort_ascending) {
+
+  switch (sort_field.value()) { //gets the value in sort_field, e.g., t, f, etc...
+    case f:
+      return sort_ascending ? (firstFile.filename < secondFile.filename) : (firstFile.filename > secondFile.filename);
+    case t:
+      return sort_ascending ? (firstFile.type < secondFile.type) : (firstFile.type > secondFile.type);
+    case c:
+      return sort_ascending ? (firstFile.n_comments < secondFile.n_comments) : (firstFile.n_comments > secondFile.n_comments);
+    case d:
+      return sort_ascending ? (firstFile.n_doc_comments < secondFile.n_doc_comments) : (firstFile.n_doc_comments > secondFile.n_doc_comments);
+    case b:
+      return sort_ascending ? (firstFile.n_blank < secondFile.n_blank) : (firstFile.n_blank > secondFile.n_blank);
+    case s:
+      return sort_ascending ? (firstFile.n_loc < secondFile.n_loc) : (firstFile.n_loc > secondFile.n_loc);
+    case a:
+      return sort_ascending ? (firstFile.n_lines < secondFile.n_lines) : (firstFile.n_lines > secondFile.n_loc);
+    default:
+      return false;
   }
 }
 
@@ -457,34 +480,46 @@ lang_type_e return_language_by_extension (const std::string& filename) {
   return UNDEF;
 }
 
-void print_summary(const std::vector<FileInfo>& db) {
-  if (db.empty()) {
-    std::cout << "No files processed\n";
+void print_summary(const std::vector<FileInfo>& db, const RunningOpt& run_options) {
+  if (db.empty()) { //if there are not files to be printed
+    std::cout << "No files processed.\n";
     return;
   }
 
+  std::vector<FileInfo> sorted_db { db }; //creates a copy of the vector, and this copy will be sorted
+
+  if (run_options.should_sort) {
+    std::sort(sorted_db.begin(), sorted_db.end(), [&run_options](const FileInfo& a, const FileInfo& b) {
+      return compare_files(a, b, run_options.sort_field, run_options.sort_ascending); //if compare_files return true, 'a' comes before 'b' after sorting
+    });
+  }
+
+  //calculate column widths
   size_t max_filename_length {0};
 
-  for (const auto& info : db) {
+  for (const auto& info : sorted_db) {
     max_filename_length = std::max(max_filename_length, info.filename.size()); //returns the greater of values
   }
 
   constexpr size_t MIN_FILENAME_WIDTH {20};
   size_t filename_width = std::max(max_filename_length, MIN_FILENAME_WIDTH);
 
-  std::cout << "Files processed: " << db.size() << "\n";
+  //print summary
+  std::cout << "Files processed: " << sorted_db.size() << "\n";
 
   std::string separator(filename_width + 14 + 16 + 16 + 14 + 14 + 10 + 6, '-');
 
   std::cout << separator << "\n";
-  std::cout << std::left << std::setw(filename_width) << "Filename" << std::setw(14) << "Language" << std::setw(16) << "Comments" << std::setw(16) << "Doc Comments" << std::setw(14) << "Blank" << std::setw(14) << "Code" << "# of lines\n";
+  std::cout << std::left << std::setw(filename_width + 1) << "Filename" << std::setw(14) << "Language" << std::setw(16) << "Comments" << std::setw(16) << "Doc Comments" << std::setw(14) << "Blank" << std::setw(14) << "Code" << "# of lines\n";
   std::cout << separator << "\n";
 
+  //print data
   count_t total_comments = 0, total_doc_comments = 0, total_blank = 0, total_code = 0, total_lines = 0;
 
-  for (const auto& info : db) {
-    std::cout << std::left << std::setw(filename_width) << info.filename << std::setw(14) << language_to_string(info.type) << std::setw(16) << value_with_percent(info.n_comments, info.n_lines) << std::setw(16) << value_with_percent(info.n_doc_comments, info.n_lines) << std::setw(14) << value_with_percent(info.n_blank, info.n_lines) << std::setw(14) << value_with_percent(info.n_loc, info.n_lines) << info.n_lines << "\n";
+  for (const auto& info : sorted_db) {
+    std::cout << std::left << std::setw(filename_width + 1) << info.filename << std::setw(14) << language_to_string(info.type) << std::setw(16) << value_with_percent(info.n_comments, info.n_lines) << std::setw(16) << value_with_percent(info.n_doc_comments, info.n_lines) << std::setw(14) << value_with_percent(info.n_blank, info.n_lines) << std::setw(14) << value_with_percent(info.n_loc, info.n_lines) << info.n_lines << "\n";
 
+    //add totals
     total_comments += info.n_comments;
     total_doc_comments += info.n_doc_comments;
     total_blank += info.n_blank;
@@ -492,13 +527,13 @@ void print_summary(const std::vector<FileInfo>& db) {
     total_lines += info.n_lines;
   }
 
-  if (db.size() > 1) {
+  //print all
+  if (sorted_db.size() > 1) {
     std::cout << separator << "\n";
-    std::cout << std::left << std::setw(filename_width) << "SUM" << std::setw(14) << "" << std::setw(16) << total_comments << std::setw(16) << total_doc_comments << std::setw(14) << total_blank << std::setw(14) << total_code << total_lines << "\n";
+    std::cout << std::left << std::setw(filename_width + 1) << "SUM" << std::setw(14) << "" << std::setw(16) << total_comments << std::setw(16) << total_doc_comments << std::setw(14) << total_blank << std::setw(14) << total_code << total_lines << "\n";
   }
 
   std::cout << separator << "\n";
-  std::cout << "teste de theo: " << universal << "\n";
 }
 
 
@@ -533,7 +568,7 @@ int main(int argc, char* argv[]) {
     db.push_back(current_file);
   }
 
-  print_summary(db);
+  print_summary(db, run_options);
 
   return EXIT_SUCCESS;
 }
