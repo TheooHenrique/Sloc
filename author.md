@@ -11,16 +11,26 @@ This project was made to verify more than one file per run, and it also has the 
 
 The main reason of doing this project is to verify the quality of code of our next projects, searching for decrease the quantity of code lines to do something. It is also important understand the reading process of a compiler, something programmers use a lot, but not always knows exactly how it works.
 
+
+
 # Author(s)
 
-### Theo Henrique da Silva Borges: <theo123b@gmail.com>
-### Haniel Lucas Machado: <hani.lucas70@gmail.com>
+Theo Henrique da Silva Borges: <theo123b@gmail.com>
+
+Haniel Lucas Machado: <hani.lucas70@gmail.com>
+```
+- Theo: did the entire state machine and organized the classes to the program work. Also did the treatment of the user inputs.
+
+- Haniel: Did the print of the table and the sort function. Also organized the doxygen comments and helped with the user inputs, doing the capture of the program extension.
+```
 
 
 # Problems found or limitations
 
+Making a good project always has some difficult parts, and sometimes it does not works exactly how the proggrammer has planned. This case don't have limitations on his purpose, but on de development we found some issues that we solved, but it was harder than the rest of the project. In this topic we are listing this difficults.
+
 ## Problems found
-Here we are listing some problems we have found doing the project
+The problems were solved, but we are listening here because it was very hard to do. We never has organized a project with classes, and this one was a good first experience of OOP (Object-Oriented Programming). Also, the state mechanic was easy to learn, but hard to implement.
 
 ### Work With States
 Work with states was certainly the worst part of the project, not just because statement is something new, but also because a StateMachine is something with a very difficult logic in this case. Thats because of the way this program works, there are very tiny details that if the programmer do not pay attention, he will make mistakes, like:
@@ -34,13 +44,15 @@ the function says hello to the world
     std::cout << "//Hello World!";
 }
 ```
-Note that the `*/` determine the end of the doc-comment block, so this line will count as a line of doc-comment line. But also, this line has a code after the `*/`, so it will be also count as a code line. That as such a hard do implement because i dit the function recursively.
+Note that the `*/` determine the end of the doc-comment block, so this line will count as a line of doc-comment line. But also, this line has a code after the `*/`, so it will be also count as a code line. That as such a hard do implement because we dit the function recursively.
+
+To the next projects we intend to make better plans before we start code. We think that this confusion about states was because we didn't planned too much.
 
 ### First Time Using Classes
 That was not so hard comparing to statement, but it was a bit difficult to understand where my input was going. Hopefully, this knowledge will bring us some smoothness in next projects.
 
 ## Limitations
-Não sei se vamos deixar
+This program has no limitations on his purpose.
 
 # Grading
 
@@ -56,12 +68,12 @@ Não sei se vamos deixar
 | Show correct number of doc comment lines            |      10      |        10      |
 | Show correct number of code lines                   |      10      |        10      |
 | Show correct number of total lines                  |      5       |         5      |
-| Show the type of source file                        |      5       |                |
-| Show percentages as requested                       |      10      |                |
-| Show consolidation at the bottom of a table         |      5       |                |
-| Table is formatted as requested                     |      8       |                |
+| Show the type of source file                        |      5       |         5      |
+| Show percentages as requested                       |      10      |        10      |
+| Show consolidation at the bottom of a table         |      5       |         5      |
+| Table is formatted as requested                     |      8       |         8      |
 | The project contains at least one struct or classes |      5       |         5      |
-| Overall evaluation of the program                   |      5       |                |
+| Overall evaluation of the program                   |      5       |         5      |
 
 # Compiling and Running
 
@@ -77,18 +89,20 @@ To run the `sloc` executable created, run this code
 ```
 Where:
 
-```./sloc: Call the executable created```
+```
+- ./sloc: Call the executable created
 
-```dir: The directory you want to analyse the c/c++ files inside```
+- dir: The directory you want to analyse the c/c++ files inside
 
-```file: The c/c++ files you want to analyse```
+- file: The c/c++ files you want to analyse 
+```
 
 Parameters: 
 - `-h` to show help
 - `-s` to sort it ascending
 - `-S` to sort it descending
 
-The `-s` and `-S` parameters are:
+The parameters of the sort parameter (`-s` and `-S`) are:
 - `f` to sort by filename
 - `t` to sort by filetype
 - `c` to sort by comments

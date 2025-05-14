@@ -1,3 +1,12 @@
+#include <algorithm>
+#include <filesystem>
+#include <fstream> //ifstream
+#include <iomanip>
+#include <iostream>
+
+// alias
+namespace fs = std::filesystem;
+
 /*!
  * @file main.cpp
  * @description
@@ -185,48 +194,6 @@ bool startLiteral(std::string line, char i){
  * 
  * @return true if the string is part of code.
  */
-bool isPartOfCode(std::string str, std::string line){
-  
-  bool leftIsPair;
-  bool rightIsPair;
-  int countLeft{0};
-  int countRight{0};
-
-  auto indexFirst{line.find(str)};
-  auto indexLast{indexFirst + str.length() - 1};
-  
-  for (size_t i{0}; i < indexFirst; i++){
-    if (line[i] == '"'){
-      countLeft++;
-    }
-  }
-
-  if (countLeft%2 == 0){
-    leftIsPair = true;
-  } else{
-    leftIsPair = false;
-  }
-
-  for (; indexLast < line.length(); indexLast++){
-    if (line[indexLast] == '"'){
-      countRight++;
-    }
-  }
-
-  if (countRight%2 == 0){
-    rightIsPair = true;
-  } else{
-    rightIsPair = false;
-  }
-  
-  if (rightIsPair && leftIsPair){
-    return false;
-  } 
-  else if (!rightIsPair && !leftIsPair){
-    return true;
-  }
-  return true;
-}
 
 
 /**
@@ -244,17 +211,16 @@ AttributeCount updateState(std::string line, CurrentCount& ts){
   line = trim(line, " ");
   size_t len = line.length();
 
+      //verify if line is blank
       if (ts.current_state != ts.COMMENT && ts.current_state != ts.DOXY){
-
         bool blank{false};
-      
       if (line.empty()) {
         blank = true;
         atributes.blank = 1;
         return atributes;
       }
 
-    }
+    }//increment the current state starting a new line
     if (ts.current_state == ts.COMMENT){
       atributes.com = 1;
     }
@@ -265,11 +231,12 @@ AttributeCount updateState(std::string line, CurrentCount& ts){
       atributes.loc = 1;
     }
 
-
+    //scan all the chars of the line
     for (size_t i{0}; i < len; ++i){
       auto minline3 = line.substr(i, 3);
       auto minline2 = line.substr(i, 2);
 
+      //close the literal state
       if (ts.current_state == ts.LITERAL){
         if (line[i] == '"'){
           if(startLiteral(line, i)){
@@ -279,8 +246,8 @@ AttributeCount updateState(std::string line, CurrentCount& ts){
         }
       }
 
+      //close the comment or doxy states
       if (ts.current_state == ts.DOXY || ts.current_state == ts.COMMENT){
-
         if (minline2 == "*/"){
           ts.current_state = ts.START;
           i += 1;
@@ -288,57 +255,54 @@ AttributeCount updateState(std::string line, CurrentCount& ts){
         }
       }
       
+      //verify if the program is in code state or literal state
       if (ts.current_state == ts.CODE || ts.current_state == ts.START){
 
+        //start literal state
         if (line[i]  == '"'){
           if (startLiteral(line, line[i])){
             ts.current_state = ts.LITERAL;
             continue;
           }
-          
         }
-
-
+        //start the doxy-comment state
         else if (minline3 == "/*!" || minline3 == "/**"){
           ts.current_state = ts.DOXY;
           atributes.dox = 1;
           i += 2;
           continue;
-        
         } 
-
+        //count the line as single-line doxy-comment and stop scanning the line
         else if (minline3 == "//!" || minline3 == "///"){
-
           atributes.dox = 1; 
           ts.current_state = ts.START;
           break;
-
         }
-
+        //start the comment state
         else if (minline2 == "/*"){
-
           ts.current_state = ts.COMMENT;
           atributes.com = 1;
           i += 1;
           continue;
-          
         }
+        //count the line as single-line comment and stop scanning the line
         else if (minline2 == "//"){
-
           atributes.com = 1;
           ts.current_state = ts.START;
           break;
-          
         }
+        //if none of the before cases happens, count one code line.
         else{
           ts.current_state = ts.CODE;
           atributes.loc = 1;
         }
       }
     }
+    //if the line ended with a code state, set the state to start to scan the next line
     if (ts.current_state == ts.CODE){
       ts.current_state = ts.START;
     }
+    //return the attributes of a line of the code.
     return atributes;
 }
 
@@ -356,6 +320,7 @@ AttributeCount statesMachine(const std::string& filename, CurrentCount ts, Attri
   std::string codeLines;
 
   while (std::getline(file, codeLines)) {
+    //call updateState() for each line of the file selected.
     AttributeCount atributes = updateState(codeLines, ts);
     atr.lines += atributes.lines;
     atr.blank += atributes.blank;
@@ -363,6 +328,7 @@ AttributeCount statesMachine(const std::string& filename, CurrentCount ts, Attri
     atr.dox += atributes.dox;
     atr.loc += atributes.loc;
   }
+  //return the attributes of a entire file
   return atr;
 }
 

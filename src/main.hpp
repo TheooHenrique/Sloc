@@ -1,15 +1,9 @@
 #ifndef SLOC_HPP
 #define SLOC_HPP
-
-#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <dirent.h>
-#include <filesystem>
-#include <fstream> //ifstream
-#include <iomanip>
-#include <iostream>
 #include <optional>
 #include <string>
 #include <utility>
@@ -17,8 +11,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-// alias
-namespace fs = std::filesystem;
+
 
 /// @brief Integer type for counting lines.
 using count_t = unsigned long;
@@ -208,15 +201,6 @@ AttributeCount updateState(std::string line, CurrentCount &ts);
  * @see compare_files()
  */
 bool compare_files(const FileInfo& firstFile, const FileInfo& secondFile, std::optional<sorting_arg> sort_field, bool sort_ascending);
-
-/**
- * @brief Check if a string is part of code (not in comments).
- * 
- * Detailed documentation for this function is provided in the implementation file.
- * 
- * @see isPartOfCode()
- */
-bool isPartOfCode(std::string str, std::string line);
 
 /**
  * @brief Check if a quote starts a string literal.
