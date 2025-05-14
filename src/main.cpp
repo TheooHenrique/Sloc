@@ -2,18 +2,21 @@
  * @file main.cpp
  * @description
  * This program implements a single line of code count for C/C++ programs.
- * @author	Add your name here
- * @date	September, 9th 2024.
- * @remark On 2022-09-9 changed ...
+ * @author	Haniel Lucas Machado Rocha
+ * @author  Theo Henrique da Silva Borges
+ * @date	May, 14th 2025.
  */
 
- #include "main.hpp"
+#include "main.hpp"
 #include <string>
 
-/// help message
-
-std::string universal = "entrei em nada";
-
+/**
+ * @brief Print usage information.
+ * 
+ * @param msg Optional message to display
+ * 
+ * Shows detailed help about program options, syntax and examples
+ */
 void usage(std::string_view msg) {
   std::cout << "Welcome to sloc cpp, version 1.0, (c) DIMAp/UFRN.\n\n";
   std::cout << "NAME\n";
@@ -54,6 +57,16 @@ void usage(std::string_view msg) {
 
 //== Aux functions
 
+/**
+ * @brief Calculate percentage string.
+ * 
+ * @param part Partial value.
+ * @param total Total value.
+ * 
+ * @return String with formated percentage (e.g., "50.0%")
+ * 
+ * @note Returns "0%" if total is zero to avoid division by zero.
+ */
 std::string percent(count_t part, count_t total) {
   if (total == 0) return "0%";
   double perc = (static_cast<double>(part) / total) * 100; //converts part to double, divides by total and multiplies by 100
@@ -62,11 +75,26 @@ std::string percent(count_t part, count_t total) {
   return oss.str() + "%"; //extracts the contents of ostringstream as a std::string.
 }
 
+/**
+ * @brief Format value with percentage.
+ * 
+ * @param value The count value.
+ * @param total The total count.
+ * 
+ * @return String in format `value (percentage)`.
+ */
 std::string value_with_percent(count_t value, count_t total) {
     return std::to_string(value) + " (" + percent(value, total) + ")";
 }
 
-// trim from left
+/**
+ * @brief Trim whitespace from left of string.
+ * 
+ * @param s String to trim.
+ * @param t Characters to trim (default whitespace).
+ * 
+ * @return Left-trimmed string.
+ */
 inline std::string ltrim(const std::string& s, const char* t) {
   std::string clone{s}; //copy of the original string s
   size_t start = clone.find_first_not_of(t); //finds the first character not in t, i.e. the first visible character
@@ -79,7 +107,15 @@ inline std::string ltrim(const std::string& s, const char* t) {
 
   return clone;
 }
-// trim from right
+
+/**
+ * @brief Trim whitespace from right of string.
+ * 
+ * @param s String to trim.
+ * @param t Characters to trim (default whitespace).
+ * 
+ * @return Right-trimmed string.
+ */
 inline std::string rtrim(const std::string& s, const char* t) {
   std::string clone{s}; //copy of the original string s
   size_t end = clone.find_last_not_of(t); //finds the last character not in t, i.e. the last visible character
@@ -92,12 +128,26 @@ inline std::string rtrim(const std::string& s, const char* t) {
   
   return clone;
 }
-// trim from left & right
+
+/**
+ * @brief Trim whitespace from both ends of string.
+ * 
+ * @param s String to trim.
+ * @param t Characters to trim (default whitespace).
+ * 
+ * @return Trimmed string.
+ */
 inline std::string trim(const std::string& s, const char* t) {
   return ltrim(rtrim(s, t), t);
 }
 
-//count total lines
+/**
+ * @brief Count total lines in a file.
+ * 
+ * @param filename Path to the file.
+ * 
+ * @return Total number of lines.
+ */
 count_t countTotalLines (const std::string& filename) {
   std::ifstream file(filename);
   int line = 0;
@@ -108,6 +158,16 @@ count_t countTotalLines (const std::string& filename) {
   return line;
 }
 
+/**
+ * @brief Check if a quote starts a string literal.
+ * 
+ * @param line The full line content.
+ * @param i Index of the quote character.
+ * 
+ * Checks if the quote isn't escaped and isn't part of a character literal.
+ * 
+ * @return true if it's a valid string literal start.
+ */
 bool startLiteral(std::string line, char i){
   if (line[i - 1] == '\\' || (line[i - 1] == '\'' && line[i + 1] == '\'')){
     return false;
@@ -115,7 +175,16 @@ bool startLiteral(std::string line, char i){
   return true;
 }
 
-///Verify if the comment command is part of the code
+/**
+ * @brief Check if a string is part of code (not in comments).
+ * 
+ * @param str The string to check (e.g., "//" or "/*").
+ * @param line The full line content.
+ * 
+ * Use quote counting to determine if the string is inside a string literal.
+ * 
+ * @return true if the string is part of code.
+ */
 bool isPartOfCode(std::string str, std::string line){
   
   bool leftIsPair;
@@ -160,9 +229,17 @@ bool isPartOfCode(std::string str, std::string line){
 }
 
 
-
-///Update the current state
-AttributeCount updateState(std::string line, CurrentCount &ts){
+/**
+ * @brief Update the counting state based on line content.
+ * 
+ * @param line Current line being processed.
+ * @param ts Current state tracker.
+ * 
+ * Implements the state machine transitions based on line content.
+ * 
+ * @return AttributeCount with counts for this line.
+ */
+AttributeCount updateState(std::string line, CurrentCount& ts){
   AttributeCount atributes;
   line = trim(line, " ");
   size_t len = line.length();
@@ -176,9 +253,6 @@ AttributeCount updateState(std::string line, CurrentCount &ts){
         atributes.blank = 1;
         return atributes;
       }
-      /*else if(!line.empty() && line[0] != '/'){
-        atributes.loc = 1;
-      }*/
 
     }
     if (ts.current_state == ts.COMMENT){
@@ -268,6 +342,15 @@ AttributeCount updateState(std::string line, CurrentCount &ts){
     return atributes;
 }
 
+/**
+ * @brief Process a file through the state machine.
+ * 
+ * @param filename File to process.
+ * @param ts Initial state.
+ * @param atr Accumulator for counts.
+ * 
+ * @return AttributeCount with updated counts.
+ */
 AttributeCount statesMachine(const std::string& filename, CurrentCount ts, AttributeCount& atr){
   std::ifstream file(filename);
   std::string codeLines;
@@ -283,7 +366,13 @@ AttributeCount statesMachine(const std::string& filename, CurrentCount ts, Attri
   return atr;
 }
 
-//function to apply the functions of totallines and blanklines to an object
+/**
+ * @brief Process a file and count its lines.
+ * 
+ * @param filename Path to the file.
+ * 
+ * @return AttributeCount with all line counts.
+ */
 AttributeCount process_file(const std::string& filename) {
   AttributeCount atr;
   CurrentCount ts;
@@ -294,7 +383,16 @@ AttributeCount process_file(const std::string& filename) {
   return atr;
 }
  
-//validate arguments in CLI
+/**
+ * @brief Validate and process command line arguments.
+ * 
+ * @param argc Argument count.
+ * @param argv Argument values.
+ * @param run_options Runtime options to populate.
+ * 
+ * Parses arguments, validates them, and sets up runtime options.
+ * Exits with error message if invalid arguments are provided.
+ */
 void validate_arguments(int argc, char* argv[], RunningOpt& run_options) {
   for (size_t ct{1}; ct < argc; ++ct) {
     auto it { inputed_arguments_with_their_keys.find(argv[ct]) }; //find the key argv[ct] in inputed_arguments_with_their_keys, which is, e.g., "-r" in case of recursive
@@ -377,6 +475,14 @@ void validate_arguments(int argc, char* argv[], RunningOpt& run_options) {
   }
 }
 
+/**
+ * @brief Collect files from directories based on options.
+ * 
+ * @param run_options Runtime options including directory list.
+ * 
+ * Populates input_list with files found in directories, respecting recursive flag.
+ * Skuns unsupported file types and avoids duplicate files.
+ */
 void collect_files(RunningOpt& run_options) {
   if (run_options.directory_list.empty()) return; //return gets out of the function
 
@@ -434,28 +540,55 @@ void collect_files(RunningOpt& run_options) {
   }
 }
 
+/**
+ * @brief Compare two files for sorting.
+ * 
+ * @param firstFile First file to compare.
+ * @param secondFile Second file to compare.
+ * @param sort_field Field to compare by.
+ * @param sort_ascending Sort direction.
+ * 
+ * @return true if firstFile should come before secondFile.
+ */
 bool compare_files(const FileInfo& firstFile, const FileInfo& secondFile, std::optional<sorting_arg> sort_field, bool sort_ascending) {
 
   switch (sort_field.value()) { //gets the value in sort_field, e.g., t, f, etc...
-    case f:
+    case f: //case sort by filename
+      // If ascending: compare if the first filename is less than the second (by ASCII, because filename is a std::string)
+      // If descending: compare if the first filename is greater than the second
       return sort_ascending ? (firstFile.filename < secondFile.filename) : (firstFile.filename > secondFile.filename);
-    case t:
+    case t: //case sort by filetype
       return sort_ascending ? (firstFile.type < secondFile.type) : (firstFile.type > secondFile.type);
-    case c:
+    case c: //case sort by number of comments
       return sort_ascending ? (firstFile.n_comments < secondFile.n_comments) : (firstFile.n_comments > secondFile.n_comments);
-    case d:
+    case d: //case sort by documentation comments
       return sort_ascending ? (firstFile.n_doc_comments < secondFile.n_doc_comments) : (firstFile.n_doc_comments > secondFile.n_doc_comments);
-    case b:
+    case b: //case sort by number of blank lines
       return sort_ascending ? (firstFile.n_blank < secondFile.n_blank) : (firstFile.n_blank > secondFile.n_blank);
-    case s:
+    case s: //case sort by sloc
       return sort_ascending ? (firstFile.n_loc < secondFile.n_loc) : (firstFile.n_loc > secondFile.n_loc);
-    case a:
+    case a: //case sort by number of total lines
       return sort_ascending ? (firstFile.n_lines < secondFile.n_lines) : (firstFile.n_lines > secondFile.n_loc);
     default:
       return false;
   }
 }
 
+/**
+ * @brief Convert language enum to string.
+ * 
+ * @param lang_type The language type to convert.
+ * 
+ * @return String representation of the language type.
+ * 
+ * @retval "C" for C language
+ * @retval "C++" for C++ language
+ * @retval "C/C++ header" for C/C++ header files
+ * @retval "C++ header" for C++ header files
+ * @retval "Undefined type" for unknown/unsupported types
+ * 
+ * @see lang_type_e
+ */
 std::string language_to_string (lang_type_e lang_type) {
   switch (lang_type) {
     case C: return "C";
@@ -466,7 +599,22 @@ std::string language_to_string (lang_type_e lang_type) {
   }
 }
 
-//referring to lang_type_e enum
+/**
+ * @brief Determine language by file extension.
+ * 
+ * @param filename The name/path of the file to analyze.
+ * 
+ * @return The corresponding language type enum value.
+ * @retval C for .c files
+ * @retval CPP for .cpp files
+ * @retval H for .h files
+ * @retval HPP for .hpp files
+ * @retval UNDEF for unsupported extensions
+ * 
+ * @note Only checks the file extension, not the actual content.
+ * 
+ * @see lang_type_e
+ */
 lang_type_e return_language_by_extension (const std::string& filename) {
   fs::path file(filename);
 
@@ -480,6 +628,15 @@ lang_type_e return_language_by_extension (const std::string& filename) {
   return UNDEF;
 }
 
+/**
+ * @brief Print summary table of line counts.
+ * 
+ * @param db Vector of file information.
+ * @param run_options Runtime options including sort preferences.ADJ_OFFSET_SINGLESHOT
+ * 
+ * Prints formatted table with counts for each file and totals.
+ * Respects sorting options from command line.
+ */
 void print_summary(const std::vector<FileInfo>& db, const RunningOpt& run_options) {
   if (db.empty()) { //if there are not files to be printed
     std::cout << "No files processed.\n";
@@ -537,9 +694,22 @@ void print_summary(const std::vector<FileInfo>& db, const RunningOpt& run_option
 }
 
 
-
 //== Main entry
 
+/**
+ * @brief Main function of the SLOC program.
+ * 
+ * @param argc Number of command-line arguments.
+ * @param argv Array of command-line argument strings.
+ * 
+ * Coordinates the entire counting process:
+ * 1. Parses command line arguments
+ * 2. Collects files to process
+ * 3. Counts lines in each file
+ * 4. Prints summary table
+ * 
+ * @return EXIT_SUCCESS if the program executes successfully.
+ */
 int main(int argc, char* argv[]) {
   RunningOpt run_options;
   validate_arguments(argc, argv, run_options);
