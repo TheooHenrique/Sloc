@@ -21,16 +21,16 @@ Haniel Lucas Machado: <hani.lucas70@gmail.com>
 ```
 - Theo: did the entire state machine and organized the classes to the program work. Also did the treatment of the user inputs.
 
-- Haniel: Did the print of the table and the sort function. Also organized the doxygen comments and helped with the user inputs, doing the capture of the program extension.
+- Haniel: Did the print of the table, the recursive and the sort function. Also organized the doxygen comments and helped with the user inputs, doing the capture of the program extension and treating error handlings.
 ```
 
 
 # Problems found or limitations
 
-Making a good project always has some difficult parts, and sometimes it does not works exactly how the proggrammer has planned. This case don't have limitations on his purpose, but on de development we found some issues that we solved, but it was harder than the rest of the project. In this topic we are listing this difficults.
+Making a good project always has some difficult parts, and sometimes it does not works exactly how the proggrammer has planned. This case don't have limitations on its purpose, but on the development we found some issues that we solved, but it was harder than the rest of the project. In this topic we are listing this difficulties.
 
 ## Problems found
-The problems were solved, but we are listening here because it was very hard to do. We never has organized a project with classes, and this one was a good first experience of OOP (Object-Oriented Programming). Also, the state mechanic was easy to learn, but hard to implement.
+The problems were solved, but we are writing here because it was very hard to do. We never organized a project with classes, and this one was a good first experience of OOP (Object-Oriented Programming). Also, the state mechanic was easy to learn, but hard to implement.
 
 ### Work With States
 Work with states was certainly the worst part of the project, not just because statement is something new, but also because a StateMachine is something with a very difficult logic in this case. Thats because of the way this program works, there are very tiny details that if the programmer do not pay attention, he will make mistakes, like:
@@ -52,7 +52,7 @@ To the next projects we intend to make better plans before we start code. We thi
 That was not so hard comparing to statement, but it was a bit difficult to understand where my input was going. Hopefully, this knowledge will bring us some smoothness in next projects.
 
 ## Limitations
-This program has no limitations on his purpose.
+This program has no limitations on its purpose.
 
 # Grading
 

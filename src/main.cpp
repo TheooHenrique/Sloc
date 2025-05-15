@@ -1,8 +1,10 @@
-#include <algorithm>
-#include <filesystem>
-#include <fstream> //ifstream
-#include <iomanip>
-#include <iostream>
+#include <algorithm>  // std::sort(), std::max()
+#include <filesystem> // fs::path, fs::exists(), fs::is_regular_file, fs::is_directory, fs::recursive_directory_iterator, fs::directory_iterator, fs::absolute()
+#include <fstream>    // std::ifstream
+#include <iomanip>    // std::setw(), std::left, std::fixed, std::setprecision()
+#include <iostream>   // std::cout, std::cerr, std::ostringstream
+#include <string>     // std::string, std::string::find_first_not_of(), std::string::find_last_not_of(), std::string::substr(), std::string::empty(), std::string::npos, std::string::size()/length(), std::string::erase()
+#include "main.hpp"
 
 // alias
 namespace fs = std::filesystem;
@@ -15,9 +17,6 @@ namespace fs = std::filesystem;
  * @author  Theo Henrique da Silva Borges
  * @date	May, 14th 2025.
  */
-
-#include "main.hpp"
-#include <string>
 
 /**
  * @brief Print usage information.

@@ -1,17 +1,13 @@
 #ifndef SLOC_HPP
 #define SLOC_HPP
-#include <cstdint>
-#include <cstdlib>
-#include <cstring>
-#include <dirent.h>
-#include <optional>
-#include <string>
-#include <utility>
-#include <vector>
-#include <unordered_map>
-#include <unordered_set>
 
-
+#include <cstdint>       // std::uint8_t
+#include <optional>      // std::optional<sorting_arg>
+#include <string>        // std::string, std::string_view
+#include <utility>       // std::move()
+#include <vector>        // std::vector<std::string>, std::vector<FileInfo>
+#include <unordered_map> // std::unordered_map<std::string, enum_arguments>, std::unordered_map<std::string, sorting_arg>
+#include <unordered_set> // std::unordered_set<std::string>
 
 /// @brief Integer type for counting lines.
 using count_t = unsigned long;
