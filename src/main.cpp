@@ -1,10 +1,8 @@
-#include <algorithm>  // std::sort(), std::max()
-#include <filesystem> // fs::path, fs::exists(), fs::is_regular_file, fs::is_directory, fs::recursive_directory_iterator, fs::directory_iterator, fs::absolute()
-#include <fstream>    // std::ifstream
-#include <iomanip>    // std::setw(), std::left, std::fixed, std::setprecision()
-#include <iostream>   // std::cout, std::cerr, std::ostringstream
-#include <string>     // std::string, std::string::find_first_not_of(), std::string::find_last_not_of(), std::string::substr(), std::string::empty(), std::string::npos, std::string::size()/length(), std::string::erase()
-#include "main.hpp"
+#include <algorithm>
+#include <filesystem>
+#include <fstream> //ifstream
+#include <iomanip>
+#include <iostream>
 
 // alias
 namespace fs = std::filesystem;
@@ -17,6 +15,9 @@ namespace fs = std::filesystem;
  * @author  Theo Henrique da Silva Borges
  * @date	May, 14th 2025.
  */
+
+#include "main.hpp"
+#include <string>
 
 /**
  * @brief Print usage information.
@@ -166,8 +167,61 @@ count_t countTotalLines (const std::string& filename) {
   return line;
 }
 
+
 /**
- * @brief Check if a quote starts a string literal.
+ * @brief Verify if index i in list line has a next value.
+ * 
+ * @param line Line to be analysed.
+ * @param idx Index to verify if there is a next.
+ * 
+ * @return True if i has a next value, false otherwise.
+ * 
+ */
+bool exist_next(std::string line, size_t idx){
+  if (idx + 1 > line.size()){
+    return false;
+  }
+  return true;
+}
+
+/**
+ * @brief Verify if index i in list line has a prev value.
+ * 
+ * @param line Line to be analysed.
+ * @param idx Index to verify if there is a prev.
+ * 
+ * @return True if i has a previous value, false otherwise.
+ * 
+ */
+bool exist_prev(std::string line, size_t idx){
+  if (idx == 0){
+    return false;
+  }
+  return true;
+}
+
+/**
+ * @brief Check if a quote ends a string literal.
+ * 
+ * @param line The full line content.
+ * @param i Index of the quote character.
+ * 
+ * Checks if the quote isn't escaped and isn't part of a character literal.
+ * 
+ * @return true if it's a valid string literal end.
+ */
+bool endLiteral(std::string line, size_t i){
+  if (exist_next(line, i) && exist_prev(line, i)){
+    if (line[i - 1] == '\\' || (line[i - 1] == '\'' && line[i + 1] == '\'')){
+      return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+/**
+ * @brief Check if a quote start a string literal.
  * 
  * @param line The full line content.
  * @param i Index of the quote character.
@@ -176,24 +230,15 @@ count_t countTotalLines (const std::string& filename) {
  * 
  * @return true if it's a valid string literal start.
  */
-bool startLiteral(std::string line, char i){
-  if (line[i - 1] == '\\' || (line[i - 1] == '\'' && line[i + 1] == '\'')){
-    return false;
+ bool startLiteral(std::string line, size_t i){
+  if (exist_next(line, i) && exist_prev(line, i)){
+    if ((line[i - 1] == '\'' && line[i + 1] == '\'')){
+      return false;
+    }
+    return true;
   }
-  return true;
+  return false;
 }
-
-/**
- * @brief Check if a string is part of code (not in comments).
- * 
- * @param str The string to check (e.g., "//" or "/*").
- * @param line The full line content.
- * 
- * Use quote counting to determine if the string is inside a string literal.
- * 
- * @return true if the string is part of code.
- */
-
 
 /**
  * @brief Update the counting state based on line content.
@@ -236,9 +281,9 @@ AttributeCount updateState(std::string line, CurrentCount& ts){
       auto minline2 = line.substr(i, 2);
 
       //close the literal state
-      if (ts.current_state == ts.LITERAL){
+    if (ts.current_state == ts.LITERAL){
         if (line[i] == '"'){
-          if(startLiteral(line, i)){
+          if(endLiteral(line, i)){
             ts.current_state = ts.START;
             continue;
           }
@@ -259,7 +304,7 @@ AttributeCount updateState(std::string line, CurrentCount& ts){
 
         //start literal state
         if (line[i]  == '"'){
-          if (startLiteral(line, line[i])){
+          if (startLiteral(line, i)){
             ts.current_state = ts.LITERAL;
             continue;
           }

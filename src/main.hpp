@@ -1,13 +1,18 @@
 #ifndef SLOC_HPP
 #define SLOC_HPP
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <dirent.h>
+#include <optional>
+#include <string>
+#include <utility>
 
-#include <cstdint>       // std::uint8_t
-#include <optional>      // std::optional<sorting_arg>
-#include <string>        // std::string, std::string_view
-#include <utility>       // std::move()
-#include <vector>        // std::vector<std::string>, std::vector<FileInfo>
-#include <unordered_map> // std::unordered_map<std::string, enum_arguments>, std::unordered_map<std::string, sorting_arg>
-#include <unordered_set> // std::unordered_set<std::string>
+#include <vector>
+#include <unordered_map>
+#include <unordered_set>
+
+
 
 /// @brief Integer type for counting lines.
 using count_t = unsigned long;
@@ -180,6 +185,7 @@ AttributeCount process_file(const std::string& filename);
  */
 AttributeCount statesMachine(const std::string& filename, CurrentCount ts, AttributeCount& atr);
 
+
 /**
  * @brief Update the counting state based on line content.
  * 
@@ -188,6 +194,24 @@ AttributeCount statesMachine(const std::string& filename, CurrentCount ts, Attri
  * @see updateState()
  */
 AttributeCount updateState(std::string line, CurrentCount &ts);
+
+/**
+ * @brief Verify if index i in list line has a next value.
+ * 
+ * Detailed documentation for this function is provided in the implementation file.
+ * 
+ * @see exist_next()
+ */
+bool exist_next(std::string line, size_t idx);
+
+/**
+ * @brief Verify if index i in list line has a prev value.
+ * 
+ * Detailed documentation for this function is provided in the implementation file.
+ * 
+ * @see exist_prev()
+ */
+ bool exist_prev(std::string line, size_t idx);
 
 /**
  * @brief Compare two files for sorting.
@@ -206,6 +230,15 @@ bool compare_files(const FileInfo& firstFile, const FileInfo& secondFile, std::o
  * @see startLiteral()
  */
 bool startLiteral(std::string line, char i);
+
+/**
+ * @brief Check if a quote ends a string literal.
+ * 
+ * Detailed documentation for this function is provided in the implementation file.
+ * 
+ * @see endLiteral()
+ */
+ bool endLiteral(std::string line, char i);
 
 /**
  * @brief Count total lines in a file.
